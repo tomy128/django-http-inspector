@@ -1,5 +1,10 @@
 # 已归档任务
 
+## [已完成] 实现独立 SQLite 默认存储
+- 状态：已完成
+- 目标：将现有 Django ORM 存储替换为项目内独立 SQLite repository，实现零 migration、跨重载持久化
+- 验收：44 个测试通过，覆盖业务库零写入、双进程初始化、锁超时、故障降级、真实 replay 和 correlation；wheel/sdist、Twine 与全新环境 wheel 安装验证通过
+
 ## [已完成] 设计独立 SQLite 默认存储
 - 状态：已完成
 - 目标：默认将 Inspector 记录保存在项目内独立 SQLite 文件中，不侵入 Django 业务数据库且可跨 runserver 重载保留

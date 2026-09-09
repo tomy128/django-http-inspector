@@ -1,17 +1,15 @@
 import logging
 import time
 
-from django.db import DatabaseError
 from django.utils import timezone
 
-from django_http_inspector.models import Exchange
-from django_http_inspector.replay.correlation import claim_attempt
+from django_http_inspector.storage.records import ExchangeRecord
 
 logger = logging.getLogger("django_http_inspector")
 
 
 class ExchangeCapture:
-    def __init__(self, environ, input_stream, config, url_data, headers):
+    def __init__(self, environ, input_stream, config, url_data, headers, repository):
         self.environ = environ
         self.input_stream = input_stream
         self.config = config
@@ -24,9 +22,14 @@ class ExchangeCapture:
         self.error_summary = ""
         self.finalized = False
         self.exchange = None
+        self.repository = repository
         url, scheme, host, provenance = url_data
+        if not repository.available:
+            return
+        nonce = next((value for name, value in headers if name.lower() == "x-django-http-inspector-replay"), None)
         try:
-            self.exchange = Exchange.objects.create(
+            self.exchange = repository.create_exchange(
+                correlation_nonce=nonce,
                 method=str(environ.get("REQUEST_METHOD", "GET")),
                 url=url,
                 url_provenance=provenance,
@@ -39,27 +42,8 @@ class ExchangeCapture:
                 request_declared_size=input_stream.declared_size,
                 client_addr=str(environ.get("REMOTE_ADDR", "")),
             )
-            self._claim_replay(headers)
-        except DatabaseError:
+        except Exception:
             logger.exception("Unable to create django-http-inspector exchange")
-
-    def _claim_replay(self, headers):
-        nonce = next((value for name, value in headers if name.lower() == "x-django-http-inspector-replay"), None)
-        if not nonce or not self.exchange:
-            return
-        try:
-            attempt = claim_attempt(nonce)
-        except (DatabaseError, ValueError):
-            attempt = None
-        if attempt:
-            self.exchange.observed_replay_attempt = attempt
-            self.exchange.save(update_fields=["observed_replay_attempt"])
-        else:
-            from django_http_inspector.models import ReplayAttempt
-
-            if ReplayAttempt.objects.filter(correlation_nonce=nonce, correlation_claimed=True).exists():
-                self.exchange.correlation_diagnostic = "duplicate-correlation"
-                self.exchange.save(update_fields=["correlation_diagnostic"])
 
     def start(self, status, headers):
         self.response_status = int(str(status).split(" ", 1)[0])
@@ -92,15 +76,9 @@ class ExchangeCapture:
             self.exchange.response_size = self.response_size
             self.exchange.response_body_truncated = self.response_size > self.config.capture_max_bytes
             self.exchange.response_body_incomplete = incomplete
-            self.exchange.state = Exchange.State.APPLICATION_ERROR if error else Exchange.State.COMPLETE
+            self.exchange.state = ExchangeRecord.State.APPLICATION_ERROR if error else ExchangeRecord.State.COMPLETE
             self.exchange.error_summary = self.error_summary
-            self.exchange.save()
-            self.prune(self.config.max_records)
-        except DatabaseError:
+            self.repository.update_exchange(self.exchange)
+            self.repository.prune(self.config.max_records)
+        except Exception:
             logger.exception("Unable to finalize django-http-inspector exchange")
-
-    @staticmethod
-    def prune(max_records):
-        stale_ids = list(Exchange.objects.order_by("-created_at", "-id").values_list("id", flat=True)[max_records:])
-        if stale_ids:
-            Exchange.objects.filter(id__in=stale_ids).delete()

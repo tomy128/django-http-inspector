@@ -2,6 +2,8 @@
 
 日期：2026-09-09
 
+存储修订：本文中的 Django ORM、`INSTALLED_APPS` 和 migration 前提已由 [独立 SQLite 存储设计](2026-09-09-independent-sqlite-storage-design.md) 取代。
+
 ## 1. 用户目标
 
 Django 开发者安装 django-http-inspector 并对项目入口做一次轻量包装后，继续运行：
@@ -36,7 +38,7 @@ Replay 必须重新向捕获时保存的完整有效 URL 发起真实 HTTP 请�
 
 ### 2.3 开发体验优先
 
-MVP 使用项目现有 Django ORM 和数据库，不引入 Redis、Celery、独立前端工程或额外服务。默认仅在 `DEBUG=True` 时启用。
+MVP 使用包自行管理的项目内 SQLite 文件，不写入业务数据库，也不引入 Redis、Celery、独立前端工程或额外服务。默认仅在 `DEBUG=True` 时启用。
 
 ## 3. MVP 范围
 
@@ -75,8 +77,6 @@ MVP 使用项目现有 Django ORM 和数据库，不引入 Redis、Celery、独�
 ### 4.1 settings
 
 ```python
-INSTALLED_APPS += ["django_http_inspector"]
-
 DJANGO_HTTP_INSPECTOR = {
     "ENABLED": DEBUG,
     "PATH": "/__inspect/",
@@ -86,6 +86,7 @@ DJANGO_HTTP_INSPECTOR = {
     "TRUSTED_PROXY_CIDRS": [],
     "INSPECTOR_ALLOWED_HOSTS": ["localhost", "127.0.0.1", "[::1]"],
     "REPLAY_TIMEOUT": 10,
+    "SQLITE_PATH": BASE_DIR / ".django-http-inspector.sqlite3",
 }
 ```
 
@@ -100,7 +101,7 @@ from django_http_inspector import InspectorWSGI
 application = InspectorWSGI(get_wsgi_application())
 ```
 
-用户执行迁移后继续使用 `python manage.py runserver`。
+用户无需加入 `INSTALLED_APPS` 或执行迁移，继续使用 `python manage.py runserver`。
 
 ### 4.3 后续 ASGI
 
@@ -121,12 +122,12 @@ django_http_inspector/
 ├── capture/       请求、响应和异常的有界采集
 ├── replay/        URL 重建、header 规范化和 HTTP 发送
 ├── inspector/     /__inspect/* 的独立轻量 Web 应用
-├── models/        Exchange 持久化与保留策略
+├── storage/       独立 SQLite schema、记录对象与 repository
 ├── templates/     服务端渲染页面
 └── static/        少量原生 CSS/JavaScript
 ```
 
-Inspector 内置应用可复用已初始化的 Django ORM、模板等基础能力，但不使用项目 URLConf 和 middleware。MVP 不引入另一套 Web 框架。
+Inspector 内置应用使用 package resources 和独立 template engine，不使用项目 URLConf、middleware、模板配置或业务数据库。MVP 不引入另一套 Web 框架。
 
 ## 6. 捕获数据流
 

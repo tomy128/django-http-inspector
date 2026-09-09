@@ -13,11 +13,6 @@ python -m pip install django-http-inspector
 ## Intended integration
 
 ```python
-# settings.py
-INSTALLED_APPS += ["django_http_inspector"]
-```
-
-```python
 # wsgi.py
 from django.core.wsgi import get_wsgi_application
 from django_http_inspector import InspectorWSGI
@@ -26,7 +21,6 @@ application = InspectorWSGI(get_wsgi_application())
 ```
 
 ```bash
-python manage.py migrate
 python manage.py runserver
 ```
 
@@ -44,10 +38,22 @@ DJANGO_HTTP_INSPECTOR = {
     "TRUSTED_PROXY_CIDRS": [],
     "INSPECTOR_ALLOWED_HOSTS": ["localhost", "127.0.0.1", "[::1]"],
     "REPLAY_TIMEOUT": 10,
+    # Default: BASE_DIR / ".django-http-inspector.sqlite3"
+    "SQLITE_PATH": BASE_DIR / ".django-http-inspector.sqlite3",
 }
 ```
 
 django-http-inspector is disabled by default when `DEBUG=False`. The MVP Inspector UI is loopback-only.
+
+Inspector records live in a package-managed SQLite database, not in Django's business database. You do not need to add the package to `INSTALLED_APPS` or run migrations. The file survives `runserver` reloads; delete it to reset all Inspector history.
+
+Add the runtime files to the project's `.gitignore`:
+
+```gitignore
+.django-http-inspector.sqlite3
+.django-http-inspector.sqlite3-shm
+.django-http-inspector.sqlite3-wal
+```
 
 ## Replay semantics
 

@@ -4,7 +4,7 @@
   <a class="brand" href="{{ base }}/" aria-label="django-http-inspector home"><span class="brand-mark">di</span> django-http-inspector</a>
   <div class="topbar-actions">
     <span class="capture-state"><i></i> Capturing</span>
-    <form action="{{ base }}/clear" method="post" data-confirm="Clear all captured requests?">
+    <form action="{{ base }}/clear" method="post" data-confirm="Clear all captured requests and replay history?">
       <input type="hidden" name="token" value="{{ token }}">
       <button class="button button-quiet" type="submit">Clear</button>
     </form>

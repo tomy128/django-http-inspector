@@ -1,3 +1,6 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 from django.test import SimpleTestCase, override_settings
 
 from django_http_inspector.config import load_config
@@ -19,3 +22,16 @@ class ConfigTests(SimpleTestCase):
     def test_non_loopback_access_requires_future_auth_support(self):
         with self.assertRaisesMessage(Exception, "loopback-only"):
             load_config()
+
+    def test_relative_sqlite_path_is_resolved_from_base_dir(self):
+        with TemporaryDirectory() as directory, override_settings(
+            BASE_DIR=Path(directory), DJANGO_HTTP_INSPECTOR={"SQLITE_PATH": "runtime/inspect.sqlite3"}
+        ):
+            self.assertEqual(load_config().sqlite_path, (Path(directory) / "runtime/inspect.sqlite3").resolve())
+
+    def test_directory_sqlite_path_is_rejected(self):
+        with TemporaryDirectory() as directory, override_settings(
+            DJANGO_HTTP_INSPECTOR={"SQLITE_PATH": directory}
+        ):
+            with self.assertRaisesMessage(Exception, "must be a file"):
+                load_config()

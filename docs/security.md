@@ -18,11 +18,12 @@ Replay is a deliberate outbound request and may access public, private, loopback
 
 DNS is resolved before sending and the transport connects to a selected resolved IP while retaining the original hostname for HTTP Host and TLS SNI. Redirects are not followed. This prevents a second independent DNS lookup from silently changing a confirmed public destination into a private destination.
 
-The correlation header is diagnostic, not authentication. Its random nonce can be claimed once using an atomic database operation.
+The correlation header is diagnostic, not authentication. Its random nonce can be claimed once together with the observed Exchange association in one atomic SQLite transaction.
 
 ## Operational guidance
 
 - Never expose `/__inspect/` publicly.
 - Do not use django-http-inspector in production.
-- Do not commit captured databases.
+- Do not commit or share `.django-http-inspector.sqlite3` or its `-wal` and `-shm` sidecars; all may contain sensitive captured data.
+- Use Clear to remove Inspector history, or stop the process and delete the database plus sidecars to reset it completely.
 - Remember that replaying mutations can charge cards, send email, write data, or enqueue jobs.

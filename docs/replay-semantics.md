@@ -16,4 +16,8 @@ The following differences from the captured WSGI request are intentional:
 
 Requests whose body was truncated, read incompletely, or failed while reading cannot be replayed.
 
+Before network activity, a pending ReplayAttempt is committed to the Inspector's independent SQLite database. If that commit fails, no request is sent. The replay transport runs without an open database transaction. If saving the final outcome fails after the request was sent, the tool reports that persistence failure and never retries the HTTP request automatically.
+
+When the replay returns through the wrapper, claiming its nonce and associating the new inbound Exchange happen in one transaction. A nonce can correlate at most one Exchange.
+
 Because WSGI servers may normalize paths and merge request headers, replay is semantically equivalent to the request observed by WSGI; it is not byte-for-byte network replay.

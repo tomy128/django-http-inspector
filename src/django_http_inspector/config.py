@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from ipaddress import ip_network
+from os import PathLike
+from pathlib import Path
 from typing import Tuple
 
 from django.conf import settings
@@ -17,6 +19,7 @@ class InspectConfig:
     inspector_allowed_hosts: Tuple[str, ...]
     inspector_allowed_client_cidrs: Tuple[str, ...]
     replay_timeout: float
+    sqlite_path: Path
 
     def is_inspector_path(self, path: str) -> bool:
         base = self.path.rstrip("/")
@@ -62,6 +65,17 @@ def load_config() -> InspectConfig:
     if not hosts or not all(isinstance(host, str) and host for host in hosts):
         raise ImproperlyConfigured("INSPECTOR_ALLOWED_HOSTS must contain host names.")
 
+    base_dir = Path(getattr(settings, "BASE_DIR", Path.cwd()))
+    sqlite_value = raw.get("SQLITE_PATH", base_dir / ".django-http-inspector.sqlite3")
+    if not isinstance(sqlite_value, (str, PathLike)) or not str(sqlite_value):
+        raise ImproperlyConfigured("DJANGO_HTTP_INSPECTOR['SQLITE_PATH'] must be a non-empty path.")
+    sqlite_path = Path(sqlite_value)
+    if not sqlite_path.is_absolute():
+        sqlite_path = base_dir / sqlite_path
+    sqlite_path = sqlite_path.resolve()
+    if sqlite_path.exists() and sqlite_path.is_dir():
+        raise ImproperlyConfigured("DJANGO_HTTP_INSPECTOR['SQLITE_PATH'] must be a file, not a directory.")
+
     return InspectConfig(
         enabled=bool(raw.get("ENABLED", settings.DEBUG)),
         path=_path(raw.get("PATH", "/__inspect/"), "PATH"),
@@ -72,4 +86,5 @@ def load_config() -> InspectConfig:
         inspector_allowed_hosts=hosts,
         inspector_allowed_client_cidrs=clients,
         replay_timeout=float(_positive_number(raw.get("REPLAY_TIMEOUT", 10), "REPLAY_TIMEOUT", (int, float))),
+        sqlite_path=sqlite_path,
     )

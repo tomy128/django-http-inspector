@@ -1,4 +1,8 @@
 import io
+import tempfile
+from pathlib import Path
+
+from django.test import override_settings
 
 
 def environ(path="/echo/", method="GET", body=b"", host="localhost:8000", remote="127.0.0.1"):
@@ -40,3 +44,24 @@ def call_wsgi(app, env):
         if close:
             close()
     return result
+
+
+class IsolatedStorageMixin:
+    def setUp(self):
+        super().setUp()
+        self.storage_directory = tempfile.TemporaryDirectory(prefix="django-http-inspector-case-")
+        self.storage_path = Path(self.storage_directory.name) / "inspector.sqlite3"
+        self.settings_override = override_settings(
+            DJANGO_HTTP_INSPECTOR={
+                "ENABLED": True,
+                "CAPTURE_MAX_BYTES": 16,
+                "MAX_RECORDS": 100,
+                "SQLITE_PATH": self.storage_path,
+            }
+        )
+        self.settings_override.enable()
+
+    def tearDown(self):
+        self.settings_override.disable()
+        self.storage_directory.cleanup()
+        super().tearDown()

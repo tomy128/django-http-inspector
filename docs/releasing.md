@@ -24,10 +24,11 @@ Run from the repository root on a clean commit:
 
 ```bash
 python tests/runtests.py
-DJANGO_SETTINGS_MODULE=tests.settings python -m django makemigrations django_http_inspector --check --dry-run
 python -m build
 python -m twine check dist/*
 ```
+
+The tests use minimal Django settings without adding django-http-inspector to `INSTALLED_APPS` and without configuring a template backend. They verify automatic independent schema creation, process-reload persistence, concurrent initialization, package-resource rendering, and real HTTP replay. Inspect the wheel contents to confirm that templates and static assets are included and Django models or migrations are not.
 
 The release must contain exactly one source archive and one universal wheel for the selected version:
 

@@ -1,21 +1,22 @@
 from importlib.resources import files
+from html import escape
 from urllib.parse import parse_qs
-
-from django.template.loader import render_to_string
 
 from django_http_inspector.inspector.presentation import present_body
 from django_http_inspector.inspector.security import mutation_allowed, request_allowed
-from django_http_inspector.models import Exchange, ReplayAttempt
+from django_http_inspector.inspector.templates import render
 from django_http_inspector.replay.service import can_replay, replay_exchange
+from django_http_inspector.storage.records import ReplayAttemptRecord
 
 
 STATUS_TEXT = {200: "OK", 302: "Found", 303: "See Other", 400: "Bad Request", 403: "Forbidden", 404: "Not Found", 500: "Internal Server Error"}
 
 
 class InspectorApp:
-    def __init__(self, config, token):
+    def __init__(self, config, token, repository):
         self.config = config
         self.token = token
+        self.repository = repository
         self.base = config.path.rstrip("/")
 
     def response(self, start_response, content, status=200, content_type="text/html; charset=utf-8", headers=()):
@@ -55,14 +56,14 @@ class InspectorApp:
         return self.response(start_response, "Not found", 404, "text/plain; charset=utf-8")
 
     def context(self, selected=None, message=""):
-        exchanges = Exchange.objects.all()[:200]
+        exchanges = self.repository.list_exchanges(limit=200)
         body = body_kind = response_body = response_kind = ""
         attempts = []
         if selected:
             body, body_kind = present_body(selected.request_body, selected.request_content_type)
             response_content_type = next((v for n, v in selected.response_headers if n.lower() == "content-type"), "")
             response_body, response_kind = present_body(selected.response_body, response_content_type)
-            attempts = list(selected.replay_attempts.all()[:20])
+            attempts = self.repository.list_attempts(selected.id, limit=20)
         return {
             "base": self.base,
             "token": self.token,
@@ -78,21 +79,36 @@ class InspectorApp:
         }
 
     def index(self, start_response):
-        selected = Exchange.objects.first()
-        return self.response(start_response, render_to_string("django_http_inspector/index.html", self.context(selected)))
+        if not self.repository.available:
+            return self.storage_error(start_response)
+        try:
+            exchanges = self.repository.list_exchanges(limit=1)
+            selected = exchanges[0] if exchanges else None
+            return self.response(start_response, render("index.html", self.context(selected)))
+        except Exception as exc:
+            return self.storage_error(start_response, exc)
 
     def detail(self, exchange_id, start_response, message=""):
         try:
-            exchange = Exchange.objects.get(pk=exchange_id)
-        except (Exchange.DoesNotExist, ValueError):
+            exchange = self.repository.get_exchange(int(exchange_id))
+        except (TypeError, ValueError):
+            exchange = None
+        except Exception as exc:
+            return self.storage_error(start_response, exc)
+        if exchange is None:
             return self.response(start_response, "Request not found", 404, "text/plain; charset=utf-8")
-        return self.response(start_response, render_to_string("django_http_inspector/index.html", self.context(exchange, message)))
+        return self.response(start_response, render("index.html", self.context(exchange, message)))
 
     def clear(self, environ, start_response):
         data = self.form(environ)
         if not mutation_allowed(environ, self.token, data.get("token", [""])[0]):
             return self.response(start_response, "Forbidden", 403, "text/plain; charset=utf-8")
-        Exchange.objects.all().delete()
+        if not self.repository.available:
+            return self.storage_error(start_response)
+        try:
+            self.repository.clear()
+        except Exception as exc:
+            return self.storage_error(start_response, exc)
         return self.redirect(start_response, self.base + "/")
 
     def replay(self, exchange_id, environ, start_response):
@@ -100,12 +116,32 @@ class InspectorApp:
         if not mutation_allowed(environ, self.token, data.get("token", [""])[0]):
             return self.response(start_response, "Forbidden", 403, "text/plain; charset=utf-8")
         try:
-            exchange = Exchange.objects.get(pk=exchange_id)
-        except (Exchange.DoesNotExist, ValueError):
+            exchange = self.repository.get_exchange(int(exchange_id))
+        except (TypeError, ValueError):
+            exchange = None
+        except Exception as exc:
+            return self.storage_error(start_response, exc)
+        if exchange is None:
             return self.response(start_response, "Request not found", 404, "text/plain; charset=utf-8")
-        attempt = replay_exchange(exchange, self.config, allow_risky=data.get("confirm", [""])[0] == "yes")
-        message = "Replay completed." if attempt.state == ReplayAttempt.State.COMPLETE else f"Replay failed: {attempt.error_summary}"
+        try:
+            attempt = replay_exchange(
+                exchange, self.config, self.repository, allow_risky=data.get("confirm", [""])[0] == "yes"
+            )
+        except Exception as exc:
+            return self.storage_error(start_response, exc)
+        message = "Replay completed." if attempt.state == ReplayAttemptRecord.State.COMPLETE else f"Replay failed: {attempt.error_summary}"
+        if attempt.persistence_error:
+            message = f"Replay was sent, but its final result could not be saved: {attempt.persistence_error}"
         return self.detail(exchange_id, start_response, message)
+
+    def storage_error(self, start_response, error=None):
+        detail = str(error or self.repository.error or "Unknown storage error")
+        body = (
+            "<!doctype html><html><head><title>Inspector storage unavailable</title></head>"
+            "<body><h1>Inspector storage unavailable</h1><p>Business requests continue normally.</p>"
+            f"<pre>{escape(detail)}</pre></body></html>"
+        )
+        return self.response(start_response, body, 500)
 
     def asset(self, relative, start_response):
         name = relative.rsplit("/", 1)[-1]

@@ -7,3 +7,6 @@ __pycache__/
 .coverage
 htmlcov/
 test.sqlite3
+.django-http-inspector.sqlite3
+.django-http-inspector.sqlite3-shm
+.django-http-inspector.sqlite3-wal

@@ -1,4 +1,5 @@
 import secrets
+import logging
 
 from django_http_inspector.config import load_config
 from django_http_inspector.wrapper.input import CapturingInput
@@ -10,9 +11,16 @@ class InspectorWSGI:
         self.application = application
         self.config = load_config()
         self.token = secrets.token_urlsafe(32)
+        from django_http_inspector.storage import InspectorRepository, UnavailableRepository
+
+        try:
+            self.repository = InspectorRepository(self.config.sqlite_path)
+        except Exception as exc:
+            logging.getLogger("django_http_inspector").exception("Unable to initialize django-http-inspector storage")
+            self.repository = UnavailableRepository(exc)
         from django_http_inspector.inspector.app import InspectorApp
 
-        self.inspector = InspectorApp(self.config, self.token)
+        self.inspector = InspectorApp(self.config, self.token, self.repository)
 
     def __call__(self, environ, start_response):
         from django_http_inspector.capture.exchange import ExchangeCapture
@@ -42,6 +50,7 @@ class InspectorWSGI:
             self.config,
             build_url(environ, self.config.trusted_proxy_cidrs),
             headers,
+            self.repository,
         )
 
         def capturing_start_response(status, response_headers, exc_info=None):
