@@ -268,7 +268,7 @@ MVP 不自行实现数据库加密。Inspector 的 loopback 访问限制、Host 
 - wheel/sdist 包含 HTML、CSS、JavaScript 和所有 schema 升级代码；
 - 最小 settings 不配置 `TEMPLATES`、不安装 Inspector app 时仍能渲染 UI。
 
-由于运行时和接入语义发生显著变化，仍使用未发布的 `0.1.0` 构建产物即可；旧的本地 `dist/` 必须在重新构建前清理，避免误上传过时 artifact。
+由于 PyPI 已存在 `0.1.0`，独立 SQLite 行为作为补丁版本 `0.1.1` 发布；旧的本地 `dist/` 必须在重新构建前清理，避免误上传过时 artifact。
 
 ## 11. 验收标准
 

@@ -1,5 +1,10 @@
 # 已归档任务
 
+## [已完成] 发布 0.1.1 构建产物
+- 状态：已完成
+- 目标：将独立 SQLite 版本升级为 0.1.1，避免与 PyPI 已存在的 0.1.0 冲突
+- 验收：版本元数据、Changelog 和发布文档一致；44 个测试、构建、Twine 与全新环境安装通过；dist 仅包含 0.1.1 wheel/sdist
+
 ## [已完成] 实现独立 SQLite 默认存储
 - 状态：已完成
 - 目标：将现有 Django ORM 存储替换为项目内独立 SQLite repository，实现零 migration、跨重载持久化
