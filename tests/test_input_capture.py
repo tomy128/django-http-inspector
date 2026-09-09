@@ -2,7 +2,7 @@ import io
 
 from django.test import SimpleTestCase
 
-from django_inspect.wrapper.input import CapturingInput
+from django_http_inspector.wrapper.input import CapturingInput
 
 
 class InputCaptureTests(SimpleTestCase):

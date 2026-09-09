@@ -1,7 +1,7 @@
 from django.test import TestCase
 
-from django_inspect.capture.exchange import ExchangeCapture
-from django_inspect.models import Exchange, ReplayAttempt
+from django_http_inspector.capture.exchange import ExchangeCapture
+from django_http_inspector.models import Exchange, ReplayAttempt
 
 
 class ModelTests(TestCase):

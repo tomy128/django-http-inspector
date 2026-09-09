@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from django_inspect.replay.target import TargetError, resolve_target
+from django_http_inspector.replay.target import TargetError, resolve_target
 
 
 class ReplayTargetTests(SimpleTestCase):

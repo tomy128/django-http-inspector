@@ -67,13 +67,13 @@ class Migration(migrations.Migration):
                 ("correlation_claimed", models.BooleanField(default=False)),
                 ("peer_address", models.CharField(blank=True, max_length=255)),
                 ("target_addresses", models.JSONField(default=list)),
-                ("source_exchange", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="replay_attempts", to="django_inspect.exchange")),
+                ("source_exchange", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="replay_attempts", to="django_http_inspector.exchange")),
             ],
             options={"ordering": ("-submitted_at", "-id")},
         ),
         migrations.AddField(
             model_name="exchange",
             name="observed_replay_attempt",
-            field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="observed_exchange", to="django_inspect.replayattempt"),
+            field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="observed_exchange", to="django_http_inspector.replayattempt"),
         ),
     ]

@@ -1,4 +1,4 @@
-"""Public API for django-inspect."""
+"""Public API for django-http-inspector."""
 
 from .wrapper.wsgi import InspectorWSGI
 

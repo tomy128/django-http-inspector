@@ -1,4 +1,4 @@
-# django-inspect Design System
+# django-http-inspector Design System
 
 ## Intent
 

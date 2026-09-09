@@ -1,8 +1,8 @@
 import secrets
 
-from django_inspect.config import load_config
-from django_inspect.wrapper.input import CapturingInput
-from django_inspect.wrapper.response import CapturingIterable
+from django_http_inspector.config import load_config
+from django_http_inspector.wrapper.input import CapturingInput
+from django_http_inspector.wrapper.response import CapturingIterable
 
 
 class InspectorWSGI:
@@ -10,14 +10,14 @@ class InspectorWSGI:
         self.application = application
         self.config = load_config()
         self.token = secrets.token_urlsafe(32)
-        from django_inspect.inspector.app import InspectorApp
+        from django_http_inspector.inspector.app import InspectorApp
 
         self.inspector = InspectorApp(self.config, self.token)
 
     def __call__(self, environ, start_response):
-        from django_inspect.capture.exchange import ExchangeCapture
-        from django_inspect.capture.headers import request_headers_from_environ
-        from django_inspect.capture.url import build_url
+        from django_http_inspector.capture.exchange import ExchangeCapture
+        from django_http_inspector.capture.headers import request_headers_from_environ
+        from django_http_inspector.capture.url import build_url
 
         path = str(environ.get("PATH_INFO", "/"))
         if not self.config.enabled:

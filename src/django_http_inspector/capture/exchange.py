@@ -4,10 +4,10 @@ import time
 from django.db import DatabaseError
 from django.utils import timezone
 
-from django_inspect.models import Exchange
-from django_inspect.replay.correlation import claim_attempt
+from django_http_inspector.models import Exchange
+from django_http_inspector.replay.correlation import claim_attempt
 
-logger = logging.getLogger("django_inspect")
+logger = logging.getLogger("django_http_inspector")
 
 
 class ExchangeCapture:
@@ -41,10 +41,10 @@ class ExchangeCapture:
             )
             self._claim_replay(headers)
         except DatabaseError:
-            logger.exception("Unable to create django-inspect exchange")
+            logger.exception("Unable to create django-http-inspector exchange")
 
     def _claim_replay(self, headers):
-        nonce = next((value for name, value in headers if name.lower() == "x-django-inspect-replay"), None)
+        nonce = next((value for name, value in headers if name.lower() == "x-django-http-inspector-replay"), None)
         if not nonce or not self.exchange:
             return
         try:
@@ -55,7 +55,7 @@ class ExchangeCapture:
             self.exchange.observed_replay_attempt = attempt
             self.exchange.save(update_fields=["observed_replay_attempt"])
         else:
-            from django_inspect.models import ReplayAttempt
+            from django_http_inspector.models import ReplayAttempt
 
             if ReplayAttempt.objects.filter(correlation_nonce=nonce, correlation_claimed=True).exists():
                 self.exchange.correlation_diagnostic = "duplicate-correlation"
@@ -97,7 +97,7 @@ class ExchangeCapture:
             self.exchange.save()
             self.prune(self.config.max_records)
         except DatabaseError:
-            logger.exception("Unable to finalize django-inspect exchange")
+            logger.exception("Unable to finalize django-http-inspector exchange")
 
     @staticmethod
     def prune(max_records):

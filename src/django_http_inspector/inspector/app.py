@@ -3,10 +3,10 @@ from urllib.parse import parse_qs
 
 from django.template.loader import render_to_string
 
-from django_inspect.inspector.presentation import present_body
-from django_inspect.inspector.security import mutation_allowed, request_allowed
-from django_inspect.models import Exchange, ReplayAttempt
-from django_inspect.replay.service import can_replay, replay_exchange
+from django_http_inspector.inspector.presentation import present_body
+from django_http_inspector.inspector.security import mutation_allowed, request_allowed
+from django_http_inspector.models import Exchange, ReplayAttempt
+from django_http_inspector.replay.service import can_replay, replay_exchange
 
 
 STATUS_TEXT = {200: "OK", 302: "Found", 303: "See Other", 400: "Bad Request", 403: "Forbidden", 404: "Not Found", 500: "Internal Server Error"}
@@ -79,14 +79,14 @@ class InspectorApp:
 
     def index(self, start_response):
         selected = Exchange.objects.first()
-        return self.response(start_response, render_to_string("django_inspect/index.html", self.context(selected)))
+        return self.response(start_response, render_to_string("django_http_inspector/index.html", self.context(selected)))
 
     def detail(self, exchange_id, start_response, message=""):
         try:
             exchange = Exchange.objects.get(pk=exchange_id)
         except (Exchange.DoesNotExist, ValueError):
             return self.response(start_response, "Request not found", 404, "text/plain; charset=utf-8")
-        return self.response(start_response, render_to_string("django_inspect/index.html", self.context(exchange, message)))
+        return self.response(start_response, render_to_string("django_http_inspector/index.html", self.context(exchange, message)))
 
     def clear(self, environ, start_response):
         data = self.form(environ)
@@ -111,6 +111,6 @@ class InspectorApp:
         name = relative.rsplit("/", 1)[-1]
         if name not in {"inspect.css", "inspect.js"}:
             return self.response(start_response, "Not found", 404, "text/plain; charset=utf-8")
-        data = files("django_inspect").joinpath("static", "django_inspect", name).read_bytes()
+        data = files("django_http_inspector").joinpath("static", "django_http_inspector", name).read_bytes()
         content_type = "text/css; charset=utf-8" if name.endswith(".css") else "text/javascript; charset=utf-8"
         return self.response(start_response, data, content_type=content_type)

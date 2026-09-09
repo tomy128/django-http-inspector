@@ -1,7 +1,7 @@
 from django.test import SimpleTestCase
 
-from django_inspect.config import load_config
-from django_inspect.inspector.security import mutation_allowed, request_allowed
+from django_http_inspector.config import load_config
+from django_http_inspector.inspector.security import mutation_allowed, request_allowed
 from tests.helpers import environ
 
 

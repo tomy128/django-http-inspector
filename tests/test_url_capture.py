@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from django_inspect.capture.url import build_url
+from django_http_inspector.capture.url import build_url
 from tests.helpers import environ
 
 

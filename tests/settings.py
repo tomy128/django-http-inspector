@@ -1,8 +1,8 @@
-SECRET_KEY = "django-inspect-tests"
+SECRET_KEY = "django-http-inspector-tests"
 DEBUG = True
 ROOT_URLCONF = "tests.urls"
 ALLOWED_HOSTS = ["*"]
-INSTALLED_APPS = ["django.contrib.contenttypes", "django_inspect"]
+INSTALLED_APPS = ["django.contrib.contenttypes", "django_http_inspector"]
 MIDDLEWARE = []
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -13,4 +13,4 @@ TEMPLATES = [
         "OPTIONS": {"context_processors": []},
     }
 ]
-DJANGO_INSPECT = {"ENABLED": True, "CAPTURE_MAX_BYTES": 16, "MAX_RECORDS": 100}
+DJANGO_HTTP_INSPECTOR = {"ENABLED": True, "CAPTURE_MAX_BYTES": 16, "MAX_RECORDS": 100}

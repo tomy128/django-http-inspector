@@ -14,13 +14,13 @@ web
 
 ## Product Purpose
 
-django-inspect 是一个嵌入现有 Django 项目的开发期 HTTP Inspector。用户安装应用、包装一次 WSGI 或 ASGI application，继续使用原来的服务启动方式，即可在同一端口的 `/__inspect/` 查看请求与响应，并将保存的请求通过真实 HTTP 连接重新发送到捕获时确定的完整 URL。
+django-http-inspector 是一个嵌入现有 Django 项目的开发期 HTTP Inspector。用户安装应用、包装一次 WSGI 或 ASGI application，继续使用原来的服务启动方式，即可在同一端口的 `/__inspect/` 查看请求与响应，并将保存的请求通过真实 HTTP 连接重新发送到捕获时确定的完整 URL。
 
 成功意味着开发者从发现异常请求到查看上下文、修改并 replay 的路径足够短，同时不需要部署独立代理、额外端口或后台服务。
 
 ## Positioning
 
-为 Django 原生开发流程提供类似 ngrok Traffic Inspector 的请求检查与真实 HTTP replay 能力，而不要求 django-inspect 自己充当反向代理或公网隧道。
+为 Django 原生开发流程提供类似 ngrok Traffic Inspector 的请求检查与真实 HTTP replay 能力，而不要求 django-http-inspector 自己充当反向代理或公网隧道。
 
 ## Brand Personality
 

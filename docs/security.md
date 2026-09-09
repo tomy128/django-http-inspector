@@ -1,6 +1,6 @@
 # Security
 
-django-inspect stores request and response bodies, headers, cookies, credentials, and personal data. Use it only in controlled development environments and configure short retention.
+django-http-inspector stores request and response bodies, headers, cookies, credentials, and personal data. Use it only in controlled development environments and configure short retention.
 
 ## Inspector access
 
@@ -23,6 +23,6 @@ The correlation header is diagnostic, not authentication. Its random nonce can b
 ## Operational guidance
 
 - Never expose `/__inspect/` publicly.
-- Do not use django-inspect in production.
+- Do not use django-http-inspector in production.
 - Do not commit captured databases.
 - Remember that replaying mutations can charge cards, send email, write data, or enqueue jobs.

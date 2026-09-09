@@ -1,10 +1,10 @@
-# django-inspect MVP 设计
+# django-http-inspector MVP 设计
 
 日期：2026-09-09
 
 ## 1. 用户目标
 
-Django 开发者安装 django-inspect 并对项目入口做一次轻量包装后，继续运行：
+Django 开发者安装 django-http-inspector 并对项目入口做一次轻量包装后，继续运行：
 
 ```bash
 python manage.py runserver
@@ -16,12 +16,12 @@ python manage.py runserver
 
 ### 2.1 application wrapper，而非 Django middleware
 
-Inspector UI 若作为普通 Django 路由，会经过项目自身的认证、租户、CSRF、重定向和限流 middleware，可能在抵达 Inspector view 前被拦截。django-inspect 因此包装 Django 的 WSGI/ASGI application，并在项目 middleware 链之前分流：
+Inspector UI 若作为普通 Django 路由，会经过项目自身的认证、租户、CSRF、重定向和限流 middleware，可能在抵达 Inspector view 前被拦截。django-http-inspector 因此包装 Django 的 WSGI/ASGI application，并在项目 middleware 链之前分流：
 
 ```text
 Server
   ↓
-django-inspect wrapper
+django-http-inspector wrapper
   ├── /__inspect/* → Inspector 内置应用
   └── 其他路径      → Django application → 项目 middleware → view
 ```
@@ -75,9 +75,9 @@ MVP 使用项目现有 Django ORM 和数据库，不引入 Redis、Celery、独�
 ### 4.1 settings
 
 ```python
-INSTALLED_APPS += ["django_inspect"]
+INSTALLED_APPS += ["django_http_inspector"]
 
-DJANGO_INSPECT = {
+DJANGO_HTTP_INSPECTOR = {
     "ENABLED": DEBUG,
     "PATH": "/__inspect/",
     "CAPTURE_MAX_BYTES": 1024 * 1024,
@@ -95,7 +95,7 @@ DJANGO_INSPECT = {
 
 ```python
 from django.core.wsgi import get_wsgi_application
-from django_inspect import InspectorWSGI
+from django_http_inspector import InspectorWSGI
 
 application = InspectorWSGI(get_wsgi_application())
 ```
@@ -106,7 +106,7 @@ application = InspectorWSGI(get_wsgi_application())
 
 ```python
 from django.core.asgi import get_asgi_application
-from django_inspect import InspectorASGI
+from django_http_inspector import InspectorASGI
 
 application = InspectorASGI(get_asgi_application())
 ```
@@ -116,7 +116,7 @@ WSGI 与 ASGI wrapper 共用配置、存储、页面和 replay 服务，不复�
 ## 5. 组件边界
 
 ```text
-django_inspect/
+django_http_inspector/
 ├── wrapper/       WSGI；后续增加 ASGI
 ├── capture/       请求、响应和异常的有界采集
 ├── replay/        URL 重建、header 规范化和 HTTP 发送
@@ -149,7 +149,7 @@ wrapper 不预先消费整个 `wsgi.input`。它以 tee input 包装原输入流
 
 ### 6.2 捕获时完整有效 URL
 
-URL 由 scheme、authority、path 和未经 parse/re-encode 的 query string 组成。WSGI 通常无法保证获得网络层原始 path bytes；若 server 提供 `RAW_URI`、`REQUEST_URI` 等非标准字段，django-inspect 保存其值并标明 server-specific provenance，否则使用 `SCRIPT_NAME`、`PATH_INFO` 等字段重建并标记为 reconstructed。
+URL 由 scheme、authority、path 和未经 parse/re-encode 的 query string 组成。WSGI 通常无法保证获得网络层原始 path bytes；若 server 提供 `RAW_URI`、`REQUEST_URI` 等非标准字段，django-http-inspector 保存其值并标明 server-specific provenance，否则使用 `SCRIPT_NAME`、`PATH_INFO` 等字段重建并标记为 reconstructed。
 
 只有当 `REMOTE_ADDR` 命中 `TRUSTED_PROXY_CIDRS` 时，`Forwarded` 或 `X-Forwarded-*` 才参与重建。优先使用标准 `Forwarded`，其次使用 `X-Forwarded-Proto` 与 `X-Forwarded-Host`；多跳值选择与离应用最近且落在可信代理链中的一项。解析必须覆盖 IPv4、IPv6、显式端口、缺失 Host 和非法端口；无法无歧义重建时禁用 Replay 并展示原因。
 
@@ -224,7 +224,7 @@ Inspector UI
   ↓
 原 endpoint / tunnel / gateway / server
   ↓
-django-inspect wrapper 再次捕获
+django-http-inspector wrapper 再次捕获
 ```
 
 ### 8.1 请求规范化
@@ -237,7 +237,7 @@ Replay 尽可能保持原请求不变，但必须移除或重算：
 - `Transfer-Encoding`；
 - 其他 hop-by-hop headers。
 
-Replay 使用目标 URL 生成 `Host`；Edit & Replay 改变 origin 后绝不沿用旧 Host。它覆盖任何同名的用户输入关联 header，并添加携带随机 nonce 的 `X-Django-Inspect-Replay`。nonce 使用恒定时间比较。只有 nonce 对应当前实例中尚未完成的 `ReplayAttempt` 时，wrapper 才尝试建立 `observed_exchange` 关联；该关联必须通过数据库条件更新或事务锁进行单次原子 claim。首个匹配 inbound 消费 nonce，后续携带相同 nonce 的请求不得关联，并记录 duplicate-correlation 诊断。该 header 不参与授权。
+Replay 使用目标 URL 生成 `Host`；Edit & Replay 改变 origin 后绝不沿用旧 Host。它覆盖任何同名的用户输入关联 header，并添加携带随机 nonce 的 `X-Django-HTTP-Inspector-Replay`。nonce 使用恒定时间比较。只有 nonce 对应当前实例中尚未完成的 `ReplayAttempt` 时，wrapper 才尝试建立 `observed_exchange` 关联；该关联必须通过数据库条件更新或事务锁进行单次原子 claim。首个匹配 inbound 消费 nonce，后续携带相同 nonce 的请求不得关联，并记录 duplicate-correlation 诊断。该 header 不参与授权。
 
 HTTP client 默认不读取环境代理配置，执行标准 TLS 证书验证，并按原始编码读取响应。301、302、303、307、308 均不自动跟随。响应自动解压若会改变保存字节，必须禁用或同时明确保存 wire encoding 与 decoded view；MVP 默认保存 HTTP client 观察到的原始响应 body。
 
@@ -262,13 +262,13 @@ HTTP client 默认不读取环境代理配置，执行标准 TLS 证书验证，
 
 参考 ngrok `:4040` 的高效信息架构：左侧请求流、右侧详情、清晰的 request/response 切换，以及详情上下文中的 replay。不得复制 ngrok 品牌标识、专有资产或逐像素视觉样式。
 
-django-inspect 的视觉气质为专业、克制、高密度。使用 restrained 色彩策略：中性背景和表面承载大量数据，单一品牌色只用于主操作、选中项和焦点；HTTP method 与状态码使用克制的语义色。
+django-http-inspector 的视觉气质为专业、克制、高密度。使用 restrained 色彩策略：中性背景和表面承载大量数据，单一品牌色只用于主操作、选中项和焦点；HTTP method 与状态码使用克制的语义色。
 
 ### 9.2 桌面布局
 
 ```text
 ┌────────────────────────────────────────────────────────────┐
-│ django-inspect   Search / Filters              Clear       │
+│ django-http-inspector   Search / Filters              Clear       │
 ├──────────────────────┬─────────────────────────────────────┤
 │ request stream       │ POST /webhooks/stripe       Replay │
 │ time method path     │ URL · status · duration · size      │

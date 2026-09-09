@@ -1,8 +1,8 @@
 from django.core.wsgi import get_wsgi_application
 from django.test import TestCase
 
-from django_inspect import InspectorWSGI
-from django_inspect.models import Exchange
+from django_http_inspector import InspectorWSGI
+from django_http_inspector.models import Exchange
 from tests.helpers import call_wsgi, environ
 
 

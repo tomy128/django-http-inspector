@@ -5,10 +5,10 @@ from wsgiref.simple_server import WSGIServer, make_server
 from django.core.wsgi import get_wsgi_application
 from django.test import TransactionTestCase
 
-from django_inspect import InspectorWSGI
-from django_inspect.models import Exchange, ReplayAttempt
-from django_inspect.replay.service import replay_exchange
-from django_inspect.replay.correlation import claim_attempt
+from django_http_inspector import InspectorWSGI
+from django_http_inspector.models import Exchange, ReplayAttempt
+from django_http_inspector.replay.service import replay_exchange
+from django_http_inspector.replay.correlation import claim_attempt
 
 
 class ThreadingWSGIServer(ThreadingMixIn, WSGIServer):

@@ -1,8 +1,8 @@
 from django.utils import timezone
 
-from django_inspect.models import ReplayAttempt
-from django_inspect.replay.target import TargetError, address_is_risky, resolve_target
-from django_inspect.replay.transport import ReplayTransportError, send_request
+from django_http_inspector.models import ReplayAttempt
+from django_http_inspector.replay.target import TargetError, address_is_risky, resolve_target
+from django_http_inspector.replay.transport import ReplayTransportError, send_request
 
 
 def can_replay(exchange):

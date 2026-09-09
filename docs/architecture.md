@@ -1,6 +1,6 @@
 # Architecture
 
-django-inspect wraps the project's WSGI application. It routes `/__inspect/*` to a small package-owned WSGI application before Django's middleware and sends every other request directly to the original Django application.
+django-http-inspector wraps the project's WSGI application. It routes `/__inspect/*` to a small package-owned WSGI application before Django's middleware and sends every other request directly to the original Django application.
 
 ```text
 WSGI server

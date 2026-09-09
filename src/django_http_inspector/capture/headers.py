@@ -27,7 +27,7 @@ def replay_headers(headers):
     result = []
     for name, value in headers:
         lower = name.lower()
-        if lower in HOP_BY_HOP_HEADERS or lower in {"content-length", "host", "x-django-inspect-replay"}:
+        if lower in HOP_BY_HOP_HEADERS or lower in {"content-length", "host", "x-django-http-inspector-replay"}:
             continue
         result.append((name, value))
     return result

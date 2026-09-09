@@ -1,7 +1,7 @@
-{% extends "django_inspect/base.html" %}
+{% extends "django_http_inspector/base.html" %}
 {% block content %}
 <header class="topbar">
-  <a class="brand" href="{{ base }}/" aria-label="django-inspect home"><span class="brand-mark">di</span> django-inspect</a>
+  <a class="brand" href="{{ base }}/" aria-label="django-http-inspector home"><span class="brand-mark">di</span> django-http-inspector</a>
   <div class="topbar-actions">
     <span class="capture-state"><i></i> Capturing</span>
     <form action="{{ base }}/clear" method="post" data-confirm="Clear all captured requests?">

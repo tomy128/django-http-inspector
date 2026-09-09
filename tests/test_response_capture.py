@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from django_inspect.wrapper.response import CapturingIterable
+from django_http_inspector.wrapper.response import CapturingIterable
 
 
 class StubCapture:

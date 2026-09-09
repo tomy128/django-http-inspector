@@ -2,7 +2,7 @@ import secrets
 
 from django.db import transaction
 
-from django_inspect.models import ReplayAttempt
+from django_http_inspector.models import ReplayAttempt
 
 
 def claim_attempt(nonce):

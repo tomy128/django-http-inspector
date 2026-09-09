@@ -3,8 +3,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from django.test import SimpleTestCase
 
-from django_inspect.replay.target import resolve_target
-from django_inspect.replay.transport import send_request
+from django_http_inspector.replay.target import resolve_target
+from django_http_inspector.replay.transport import send_request
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -12,7 +12,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
-        type(self).seen = (self.path, self.headers.get("Host"), self.headers.get("X-Django-Inspect-Replay"), body)
+        type(self).seen = (self.path, self.headers.get("Host"), self.headers.get("X-Django-HTTP-Inspector-Replay"), body)
         self.send_response(201)
         self.send_header("X-Test", "yes")
         self.end_headers()

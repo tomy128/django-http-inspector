@@ -1,8 +1,8 @@
 from django.core.wsgi import get_wsgi_application
 from django.test import TestCase
 
-from django_inspect import InspectorWSGI
-from django_inspect.models import Exchange
+from django_http_inspector import InspectorWSGI
+from django_http_inspector.models import Exchange
 from tests.helpers import call_wsgi, environ
 
 
@@ -22,7 +22,7 @@ class WrapperTests(TestCase):
     def test_inspector_bypasses_business_app_and_capture(self):
         result = call_wsgi(self.app, environ("/__inspect/"))
         self.assertEqual(result["status"], "200 OK")
-        self.assertIn(b"django-inspect", result["body"])
+        self.assertIn(b"django-http-inspector", result["body"])
         self.assertEqual(Exchange.objects.count(), 0)
 
     def test_streaming_response_is_not_preconsumed(self):

@@ -2,7 +2,7 @@ import http.client
 import socket
 import ssl
 
-from django_inspect.capture.headers import replay_headers
+from django_http_inspector.capture.headers import replay_headers
 
 
 class ReplayTransportError(Exception):
@@ -49,7 +49,7 @@ def send_request(target, method, headers, body, timeout, max_bytes, nonce):
         connection.putheader("Host", host)
         for name, value in replay_headers(headers):
             connection.putheader(name, value)
-        connection.putheader("X-Django-Inspect-Replay", nonce)
+        connection.putheader("X-Django-HTTP-Inspector-Replay", nonce)
         connection.putheader("Content-Length", str(len(body)))
         connection.endheaders(body)
         response = connection.getresponse()

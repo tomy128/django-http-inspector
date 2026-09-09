@@ -1,7 +1,7 @@
-# django-inspect MVP 1.0 实施计划
+# django-http-inspector MVP 1.0 实施计划
 
 日期：2026-09-09  
-依据：[MVP 设计](../docs/superpowers/specs/2026-09-09-django-inspect-mvp-design.md)
+依据：[MVP 设计](../docs/superpowers/specs/2026-09-09-django-http-inspector-mvp-design.md)
 
 ## 目标
 
@@ -28,7 +28,7 @@
 ```text
 pyproject.toml
 README.md
-src/django_inspect/
+src/django_http_inspector/
 ├── __init__.py
 ├── apps.py
 ├── config.py
@@ -53,11 +53,11 @@ src/django_inspect/
 │   ├── security.py
 │   ├── views.py
 │   └── presentation.py
-├── templates/django_inspect/
+├── templates/django_http_inspector/
 │   ├── base.html
 │   ├── index.html
 │   └── exchange_detail.html
-└── static/django_inspect/
+└── static/django_http_inspector/
     ├── inspect.css
     └── inspect.js
 tests/
@@ -86,8 +86,8 @@ tests/
 文件：
 
 - `pyproject.toml`
-- `src/django_inspect/__init__.py`
-- `src/django_inspect/apps.py`
+- `src/django_http_inspector/__init__.py`
+- `src/django_http_inspector/apps.py`
 - `tests/settings.py`
 - `tests/urls.py`
 - `tests/wsgi.py`
@@ -107,13 +107,13 @@ python -m unittest discover -s tests
 python -m build
 ```
 
-提交边界：`chore: scaffold installable django-inspect package`
+提交边界：`chore: scaffold installable django-http-inspector package`
 
 ### 2. 配置加载与路径判定
 
 文件：
 
-- `src/django_inspect/config.py`
+- `src/django_http_inspector/config.py`
 - `tests/test_config.py`
 
 工作：
@@ -132,8 +132,8 @@ python -m build
 
 文件：
 
-- `src/django_inspect/models.py`
-- `src/django_inspect/migrations/0001_initial.py`
+- `src/django_http_inspector/models.py`
+- `src/django_http_inspector/migrations/0001_initial.py`
 - `tests/test_models.py`
 
 工作：
@@ -153,7 +153,7 @@ python -m build
 
 文件：
 
-- `src/django_inspect/wrapper/input.py`
+- `src/django_http_inspector/wrapper/input.py`
 - `tests/test_input_capture.py`
 
 工作：
@@ -172,8 +172,8 @@ python -m build
 
 文件：
 
-- `src/django_inspect/capture/url.py`
-- `src/django_inspect/capture/headers.py`
+- `src/django_http_inspector/capture/url.py`
+- `src/django_http_inspector/capture/headers.py`
 - `tests/test_url_capture.py`
 
 工作：
@@ -192,9 +192,9 @@ python -m build
 
 文件：
 
-- `src/django_inspect/wrapper/response.py`
-- `src/django_inspect/capture/exchange.py`
-- `src/django_inspect/wrapper/wsgi.py`
+- `src/django_http_inspector/wrapper/response.py`
+- `src/django_http_inspector/capture/exchange.py`
+- `src/django_http_inspector/wrapper/wsgi.py`
 - `tests/test_response_capture.py`
 - `tests/test_wrapper.py`
 
@@ -215,9 +215,9 @@ python -m build
 
 文件：
 
-- `src/django_inspect/inspector/app.py`
-- `src/django_inspect/inspector/routing.py`
-- `src/django_inspect/inspector/security.py`
+- `src/django_http_inspector/inspector/app.py`
+- `src/django_http_inspector/inspector/routing.py`
+- `src/django_http_inspector/inspector/security.py`
 - `tests/test_inspector_security.py`
 
 工作：
@@ -237,13 +237,13 @@ python -m build
 
 文件：
 
-- `src/django_inspect/inspector/views.py`
-- `src/django_inspect/inspector/presentation.py`
-- `src/django_inspect/templates/django_inspect/base.html`
-- `src/django_inspect/templates/django_inspect/index.html`
-- `src/django_inspect/templates/django_inspect/exchange_detail.html`
-- `src/django_inspect/static/django_inspect/inspect.css`
-- `src/django_inspect/static/django_inspect/inspect.js`
+- `src/django_http_inspector/inspector/views.py`
+- `src/django_http_inspector/inspector/presentation.py`
+- `src/django_http_inspector/templates/django_http_inspector/base.html`
+- `src/django_http_inspector/templates/django_http_inspector/index.html`
+- `src/django_http_inspector/templates/django_http_inspector/exchange_detail.html`
+- `src/django_http_inspector/static/django_http_inspector/inspect.css`
+- `src/django_http_inspector/static/django_http_inspector/inspect.js`
 - `tests/test_inspector_ui.py`
 
 工作：
@@ -266,7 +266,7 @@ python -m build
 
 文件：
 
-- `src/django_inspect/replay/target.py`
+- `src/django_http_inspector/replay/target.py`
 - `tests/test_replay_target.py`
 
 工作：
@@ -285,8 +285,8 @@ python -m build
 
 文件：
 
-- `src/django_inspect/replay/transport.py`
-- `src/django_inspect/replay/service.py`
+- `src/django_http_inspector/replay/transport.py`
+- `src/django_http_inspector/replay/service.py`
 - `tests/test_replay_transport.py`
 
 工作：
@@ -306,9 +306,9 @@ python -m build
 
 文件：
 
-- `src/django_inspect/replay/correlation.py`
-- `src/django_inspect/inspector/views.py`
-- `src/django_inspect/templates/django_inspect/exchange_detail.html`
+- `src/django_http_inspector/replay/correlation.py`
+- `src/django_http_inspector/inspector/views.py`
+- `src/django_http_inspector/templates/django_http_inspector/exchange_detail.html`
 - `tests/test_end_to_end.py`
 
 工作：

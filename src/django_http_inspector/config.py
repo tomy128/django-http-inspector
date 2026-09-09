@@ -31,20 +31,20 @@ class InspectConfig:
 
 def _path(value: object, name: str) -> str:
     if not isinstance(value, str) or not value.startswith("/"):
-        raise ImproperlyConfigured(f"DJANGO_INSPECT[{name!r}] must start with '/'.")
+        raise ImproperlyConfigured(f"DJANGO_HTTP_INSPECTOR[{name!r}] must start with '/'.")
     return value.rstrip("/") + "/"
 
 
 def _positive_number(value: object, name: str, number_type):
     if isinstance(value, bool) or not isinstance(value, number_type) or value <= 0:
-        raise ImproperlyConfigured(f"DJANGO_INSPECT[{name!r}] must be positive.")
+        raise ImproperlyConfigured(f"DJANGO_HTTP_INSPECTOR[{name!r}] must be positive.")
     return value
 
 
 def load_config() -> InspectConfig:
-    raw = getattr(settings, "DJANGO_INSPECT", {})
+    raw = getattr(settings, "DJANGO_HTTP_INSPECTOR", {})
     if not isinstance(raw, dict):
-        raise ImproperlyConfigured("DJANGO_INSPECT must be a dictionary.")
+        raise ImproperlyConfigured("DJANGO_HTTP_INSPECTOR must be a dictionary.")
 
     trusted = tuple(raw.get("TRUSTED_PROXY_CIDRS", ()))
     clients = tuple(raw.get("INSPECTOR_ALLOWED_CLIENT_CIDRS", ("127.0.0.0/8", "::1/128")))
@@ -52,7 +52,7 @@ def load_config() -> InspectConfig:
         for cidr in trusted + clients:
             ip_network(cidr, strict=False)
     except (TypeError, ValueError) as exc:
-        raise ImproperlyConfigured(f"Invalid django-inspect CIDR: {exc}") from exc
+        raise ImproperlyConfigured(f"Invalid django-http-inspector CIDR: {exc}") from exc
     if any(not ip_network(cidr, strict=False).is_loopback for cidr in clients):
         raise ImproperlyConfigured(
             "MVP Inspector access is loopback-only; non-loopback authentication is not implemented."
