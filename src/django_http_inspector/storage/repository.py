@@ -52,7 +52,7 @@ def _record(row, record_type, json_fields, bool_fields, time_fields):
         values[name] = bool(values[name])
     for name in time_fields:
         values[name] = _load_time(values[name])
-    allowed = {item.name for item in fields(record_type) if item.name != "persistence_error"}
+    allowed = {item.name for item in fields(record_type) if item.name not in {"persistence_error", "network_attempted"}}
     return record_type(**{key: value for key, value in values.items() if key in allowed})
 
 
@@ -205,16 +205,17 @@ class InspectorRepository:
         with self._transaction() as connection:
             connection.execute("DELETE FROM replay_attempt WHERE id=?", (attempt_id,))
 
-    def create_attempt(self, source_exchange_id, method, url, request_headers, request_body):
+    def create_attempt(self, source_exchange_id, method, url, request_headers, request_body, mode="equivalent"):
         record = ReplayAttemptRecord(
             source_exchange_id=source_exchange_id,
             method=method,
             url=url,
             request_headers=request_headers,
             request_body=request_body,
+            mode=mode,
             correlation_nonce=str(uuid.uuid4()),
         )
-        columns = [field.name for field in fields(ReplayAttemptRecord) if field.name not in {"id", "persistence_error"}]
+        columns = [field.name for field in fields(ReplayAttemptRecord) if field.name not in {"id", "persistence_error", "network_attempted"}]
         encoded = self._encode(record, columns, ATTEMPT_JSON, ATTEMPT_BOOL, ATTEMPT_TIME)
         with self._transaction() as connection:
             cursor = connection.execute(
@@ -224,7 +225,7 @@ class InspectorRepository:
         return record
 
     def update_attempt(self, record):
-        columns = [field.name for field in fields(ReplayAttemptRecord) if field.name not in {"id", "persistence_error"}]
+        columns = [field.name for field in fields(ReplayAttemptRecord) if field.name not in {"id", "persistence_error", "network_attempted"}]
         encoded = self._encode(record, columns, ATTEMPT_JSON, ATTEMPT_BOOL, ATTEMPT_TIME)
         with self._transaction() as connection:
             connection.execute(

@@ -14,7 +14,9 @@ The MVP intentionally rejects non-loopback client CIDRs because authentication f
 
 ## Replay
 
-Replay is a deliberate outbound request and may access public, private, loopback, link-local, reserved, or metadata destinations. The UI requires explicit acknowledgement before sending. Only HTTP and HTTPS URLs without userinfo are accepted.
+Replay is a deliberate outbound request and may access public, private, loopback, link-local, reserved, or metadata destinations. A persistent warning beside each replay action makes this risk visible; clicking the action sends immediately. Only HTTP and HTTPS URLs without userinfo are accepted.
+
+Edit & Replay accepts headers and textual bodies only. Header syntax, count, line size, aggregate size, control characters, and ISO-8859-1 encodability are validated. Binary or incomplete captured bodies cannot be edited. Client payloads cannot override the captured method or URL, and unexpected fields are rejected before a replay attempt is created.
 
 DNS is resolved before sending and the transport connects to a selected resolved IP while retaining the original hostname for HTTP Host and TLS SNI. Redirects are not followed. This prevents a second independent DNS lookup from silently changing a confirmed public destination into a private destination.
 

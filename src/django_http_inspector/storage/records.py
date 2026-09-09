@@ -81,3 +81,4 @@ class ReplayAttemptRecord:
     peer_address: str = ""
     target_addresses: List[str] = field(default_factory=list)
     persistence_error: str = ""
+    network_attempted: bool = False

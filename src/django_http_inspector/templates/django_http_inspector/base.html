@@ -6,7 +6,7 @@
   <title>django-http-inspector</title>
   <link rel="stylesheet" href="{{ base }}/assets/inspect.css">
 </head>
-<body>
+<body data-inspector-base="{{ base }}" data-list-cursor="{{ list_cursor }}" data-selected-id="{% if selected %}{{ selected.id }}{% endif %}" data-token="{{ token }}">
   {% block content %}{% endblock %}
   <script src="{{ base }}/assets/inspect.js" defer></script>
 </body>

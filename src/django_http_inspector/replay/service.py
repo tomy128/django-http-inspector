@@ -15,13 +15,16 @@ def can_replay(exchange):
     )
 
 
-def replay_exchange(exchange, config, repository, allow_risky=False):
+def replay_exchange(exchange, config, repository, allow_risky=False, headers=None, body=None, mode="equivalent"):
+    request_headers = exchange.request_headers if headers is None else headers
+    request_body = bytes(exchange.request_body) if body is None else body
     attempt = repository.create_attempt(
         source_exchange_id=exchange.id,
         method=exchange.method,
         url=exchange.url,
-        request_headers=exchange.request_headers,
-        request_body=bytes(exchange.request_body),
+        request_headers=request_headers,
+        request_body=request_body,
+        mode=mode,
     )
     try:
         if not can_replay(exchange):
@@ -30,11 +33,12 @@ def replay_exchange(exchange, config, repository, allow_risky=False):
         attempt.target_addresses = list(target.addresses)
         if target.risky and not allow_risky:
             raise TargetError("The replay target resolves to a non-public address and requires confirmation.")
-        status, headers, body, size, peer = send_request(
+        attempt.network_attempted = True
+        status, response_headers, response_body, size, peer = send_request(
             target,
             exchange.method,
-            exchange.request_headers,
-            bytes(exchange.request_body),
+            request_headers,
+            request_body,
             config.replay_timeout,
             config.capture_max_bytes,
             str(attempt.correlation_nonce),
@@ -42,8 +46,8 @@ def replay_exchange(exchange, config, repository, allow_risky=False):
         if address_is_risky(peer) and not target.risky:
             raise TargetError("The connected peer changed to a restricted address.")
         attempt.response_status = status
-        attempt.response_headers = headers
-        attempt.response_body = body
+        attempt.response_headers = response_headers
+        attempt.response_body = response_body
         attempt.response_size = size
         attempt.response_body_truncated = size > config.capture_max_bytes
         attempt.peer_address = peer

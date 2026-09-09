@@ -3,7 +3,7 @@
 <header class="topbar">
   <a class="brand" href="{{ base }}/" aria-label="django-http-inspector home"><span class="brand-mark">di</span> django-http-inspector</a>
   <div class="topbar-actions">
-    <span class="capture-state"><i></i> Capturing</span>
+    <span class="capture-state is-live" data-live-state><i></i><span>Live</span></span>
     <form action="{{ base }}/clear" method="post" data-confirm="Clear all captured requests and replay history?">
       <input type="hidden" name="token" value="{{ token }}">
       <button class="button button-quiet" type="submit">Clear</button>
@@ -12,39 +12,43 @@
 </header>
 <main class="workspace">
   <aside class="stream" aria-label="Captured requests">
-    <div class="stream-heading"><h1>Requests</h1><span>{{ exchanges|length }}</span></div>
-    {% if exchanges %}
-      <ol class="request-list">
-        {% for exchange in exchanges %}
-          <li>
-            <a href="{{ base }}/requests/{{ exchange.id }}/" class="request-row {% if selected.id == exchange.id %}selected{% endif %}">
-              <span class="method method-{{ exchange.method|lower }}">{{ exchange.method }}</span>
-              <span class="request-path">{{ exchange.path }}</span>
-              <span class="request-meta">
-                {% if exchange.response_status %}<b class="status status-{{ exchange.response_status|stringformat:'s'|slice:':1' }}xx">{{ exchange.response_status }}</b>{% else %}<b>…</b>{% endif %}
-                {% if exchange.duration_ms != None %}{{ exchange.duration_ms|floatformat:0 }} ms{% endif %}
-              </span>
-            </a>
-          </li>
-        {% endfor %}
-      </ol>
-    {% else %}
-      <div class="empty"><strong>Waiting for traffic</strong><p>Use your Django app normally. Requests will appear here.</p></div>
-    {% endif %}
+    <div class="stream-heading"><h1>Requests</h1><span data-request-count>{{ exchange_total }}</span></div>
+    <ol class="request-list" data-request-list {% if not exchanges %}hidden{% endif %}>
+      {% for exchange in exchanges %}
+        <li data-exchange-id="{{ exchange.id }}">
+          <a href="{{ base }}/requests/{{ exchange.id }}/" data-request-link class="request-row {% if selected.id == exchange.id %}selected{% endif %}">
+            <span class="method method-{{ exchange.method|lower }}">{{ exchange.method }}</span>
+            <span class="request-path">{{ exchange.path }}</span>
+            <span class="request-meta">
+              {% if exchange.response_status %}<b class="status status-{{ exchange.response_status|stringformat:'s'|slice:':1' }}xx">{{ exchange.response_status }}</b>{% else %}<b>…</b>{% endif %}
+              {% if exchange.duration_ms != None %}{{ exchange.duration_ms|floatformat:0 }} ms{% endif %}
+            </span>
+          </a>
+        </li>
+      {% endfor %}
+    </ol>
+    <div class="empty" data-stream-empty {% if exchanges %}hidden{% endif %}><strong>Waiting for traffic</strong><p>Use your Django app normally. Requests will appear here.</p></div>
   </aside>
 
   <section class="detail" aria-label="Request details">
     {% if selected %}
       <div class="detail-header">
         <div><span class="method method-{{ selected.method|lower }}">{{ selected.method }}</span><h2>{{ selected.path }}</h2><p>{{ selected.url }}</p></div>
-        <form action="{{ base }}/requests/{{ selected.id }}/replay" method="post">
-          <input type="hidden" name="token" value="{{ token }}">
-          <label class="confirm"><input type="checkbox" name="confirm" value="yes" required> I understand replay sends a real request and may cause side effects.</label>
-          <button class="button button-primary" type="submit" {% if not can_replay %}disabled title="The request body was not captured completely."{% endif %}>Replay request</button>
-        </form>
+        <div class="replay-actions">
+          <p class="side-effect-note">Replay sends a real request and may cause side effects.</p>
+          <div class="button-row">
+            <button class="button button-quiet" type="button" data-edit-request data-capture-action {% if not can_edit %}disabled title="{{ edit_reason|default:'The request body cannot be edited.' }}"{% endif %}>Edit request</button>
+            <form action="{{ base }}/requests/{{ selected.id }}/replay" method="post">
+              <input type="hidden" name="token" value="{{ token }}">
+              <button class="button button-primary" type="submit" data-capture-action {% if not can_replay %}disabled title="The request body was not captured completely."{% endif %}>Replay request</button>
+            </form>
+          </div>
+        </div>
       </div>
-      {% if message %}<div class="notice" role="status">{{ message }}</div>{% endif %}
+      <div class="notice" role="status" data-replay-notice {% if not message %}hidden{% endif %}>{{ message }}</div>
+      <div class="warning" data-removed-warning hidden>This capture was removed from Inspector storage. Replay actions are disabled.</div>
       {% if selected.request_body_truncated or selected.request_body_incomplete %}<div class="warning">Request body is incomplete. Replay is unavailable.</div>{% endif %}
+      {% if not can_edit and edit_reason and can_replay %}<div class="warning">{{ edit_reason }}</div>{% endif %}
       <div class="summary">
         <span><small>Status</small><strong>{{ selected.response_status|default:"—" }}</strong></span>
         <span><small>Duration</small><strong>{% if selected.duration_ms != None %}{{ selected.duration_ms|floatformat:1 }} ms{% else %}—{% endif %}</strong></span>
@@ -56,14 +60,38 @@
         <button role="tab" aria-selected="false" data-tab="response">Response</button>
       </div>
       <div class="tab-panel" data-panel="request">
-        <section class="data-section"><h3>Headers</h3><dl class="headers">{% for name, value in selected.request_headers %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% empty %}<dd>None</dd>{% endfor %}</dl></section>
-        <section class="data-section"><h3>Body <span>{{ request_body_kind }}</span></h3><pre>{{ request_body }}</pre></section>
+        <div data-request-view>
+          <section class="data-section"><h3>Headers</h3><dl class="headers">{% for name, value in selected.request_headers %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% empty %}<dd>None</dd>{% endfor %}</dl></section>
+          <section class="data-section"><h3>Body <span>{{ request_body_kind }}</span></h3><pre>{{ request_body }}</pre></section>
+        </div>
+        {% if can_edit %}
+          <form class="edit-replay" data-edit-form data-endpoint="{{ base }}/requests/{{ selected.id }}/edit-replay" hidden>
+            <div class="edit-banner"><strong>Editing a replay copy.</strong> The original capture will not change.</div>
+            <section class="data-section">
+              <label for="edit-headers">Headers <span>one Name: Value header per line</span></label>
+              <textarea id="edit-headers" name="headers_text" rows="9" spellcheck="false" data-edit-headers>{{ edit_headers }}</textarea>
+              <p class="field-help">Host, Content-Length, connection headers, and the replay correlation header are regenerated or removed.</p>
+              <p class="field-error" data-error-for="headers_text" role="alert" hidden></p>
+            </section>
+            <section class="data-section">
+              <label for="edit-body">Body <span>{{ request_body_kind }}</span></label>
+              <textarea id="edit-body" name="body_text" rows="14" spellcheck="false" data-edit-body>{{ edit_body }}</textarea>
+              <p class="field-error" data-error-for="body_text" role="alert" hidden></p>
+            </section>
+            <div class="edit-actions">
+              <button class="button button-quiet" type="button" data-edit-cancel>Cancel</button>
+              <button class="button button-quiet" type="button" data-edit-reset>Reset</button>
+              <span class="side-effect-note">May cause side effects.</span>
+              <button class="button button-primary" type="submit" data-edit-submit data-capture-action>Replay edited request</button>
+            </div>
+          </form>
+        {% endif %}
       </div>
       <div class="tab-panel" data-panel="response" hidden>
         <section class="data-section"><h3>Headers</h3><dl class="headers">{% for name, value in selected.response_headers %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% empty %}<dd>None</dd>{% endfor %}</dl></section>
         <section class="data-section"><h3>Body <span>{{ response_body_kind }}</span></h3><pre>{{ response_body }}</pre></section>
       </div>
-      {% if attempts %}<section class="attempts"><h3>Replay attempts</h3>{% for attempt in attempts %}<div><strong>{{ attempt.state }}</strong> · {{ attempt.response_status|default:attempt.error_stage }} · {{ attempt.submitted_at }}</div>{% endfor %}</section>{% endif %}
+      {% if attempts %}<section class="attempts"><h3>Replay attempts</h3>{% for attempt in attempts %}<div><strong>{{ attempt.state }}</strong> · {{ attempt.mode }} · {{ attempt.response_status|default:attempt.error_stage }} · {{ attempt.submitted_at }}</div>{% endfor %}</section>{% endif %}
     {% else %}
       <div class="empty detail-empty"><strong>No request selected</strong><p>Captured request and response details will appear here.</p></div>
     {% endif %}

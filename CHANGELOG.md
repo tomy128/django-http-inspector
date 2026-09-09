@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 - 2026-09-09
+
+- Remove the per-replay acknowledgement checkbox and keep the side-effect warning beside the action.
+- Refresh the request stream automatically with visibility-aware retry behavior while preserving the selected detail and edit draft.
+- Add Edit & Replay for raw headers and textual bodies while keeping the captured method and URL immutable.
+
 ## 0.1.1 - 2026-09-09
 
 - Store captured traffic in a package-managed project SQLite file by default.

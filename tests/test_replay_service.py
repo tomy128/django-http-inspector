@@ -64,4 +64,23 @@ class ReplayServiceTests(IsolatedStorageMixin, SimpleTestCase):
         finally:
             self.repository.update_attempt = original
         self.assertEqual(attempt.persistence_error, "disk full")
+        self.assertTrue(attempt.network_attempted)
         send.assert_called_once()
+
+    @patch("django_http_inspector.replay.service.resolve_target")
+    @patch("django_http_inspector.replay.service.send_request")
+    def test_edited_mode_and_snapshot_are_persisted_and_sent(self, send, resolve):
+        resolve.return_value = ReplayTarget(
+            "https://example.test/hook", "https", "example.test", 443, "/hook", ("93.184.216.34",), False
+        )
+        send.return_value = (200, [], b"ok", 2, "93.184.216.34")
+        source = self.source()
+        headers = [["Content-Type", "text/plain"], ["X-Test", "edited"]]
+        attempt = replay_exchange(source, load_config(), self.repository, headers=headers, body=b"edited", mode="edited")
+        stored = self.repository.get_attempt(attempt.id)
+        self.assertEqual(stored.mode, "edited")
+        self.assertEqual(stored.method, source.method)
+        self.assertEqual(stored.url, source.url)
+        self.assertEqual(stored.request_headers, headers)
+        self.assertEqual(stored.request_body, b"edited")
+        self.assertEqual(send.call_args.args[1:4], (source.method, headers, b"edited"))

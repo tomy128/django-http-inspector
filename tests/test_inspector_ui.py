@@ -1,7 +1,11 @@
 from django.core.wsgi import get_wsgi_application
+import json
+from unittest.mock import patch
+
 from django.test import SimpleTestCase
 
 from django_http_inspector import InspectorWSGI
+from django_http_inspector.storage.records import ReplayAttemptRecord
 from tests.helpers import IsolatedStorageMixin, call_wsgi, environ
 
 
@@ -22,6 +26,66 @@ class InspectorUITests(IsolatedStorageMixin, SimpleTestCase):
         self.assertEqual(result["status"], "200 OK")
         self.assertNotIn(b"<script>alert", result["body"])
         self.assertIn(b"&lt;script&gt;", result["body"])
+
+    def test_detail_has_direct_replay_warning_live_list_and_edit_fields(self):
+        result = call_wsgi(self.app, environ(f"/__inspect/requests/{self.exchange.id}/"))
+        self.assertIn(b"Replay sends a real request and may cause side effects.", result["body"])
+        self.assertNotIn(b'type="checkbox"', result["body"])
+        self.assertIn(b"data-live-state", result["body"])
+        self.assertIn(b"data-edit-headers", result["body"])
+        self.assertIn(b"data-edit-body", result["body"])
+        self.assertIn(b">POST<", result["body"])
+        self.assertIn(b"https://example.test/webhook", result["body"])
+
+    def test_exchange_snapshot_is_lightweight_and_not_cached(self):
+        result = call_wsgi(self.app, environ("/__inspect/api/exchanges"))
+        payload = json.loads(result["body"])
+        self.assertEqual(result["status"], "200 OK")
+        self.assertEqual(payload["total"], 1)
+        self.assertEqual(payload["exchanges"][0]["id"], self.exchange.id)
+        self.assertNotIn("request_body", payload["exchanges"][0])
+        self.assertIn(("Cache-Control", "no-store"), result["headers"])
+
+    def edit_environ(self, payload):
+        body = json.dumps(payload).encode()
+        env = environ(f"/__inspect/requests/{self.exchange.id}/edit-replay", "POST", body)
+        env["CONTENT_TYPE"] = "application/json"
+        return env
+
+    @patch("django_http_inspector.inspector.app.replay_exchange")
+    def test_edit_replay_uses_original_target_with_edited_snapshot(self, replay):
+        replay.return_value = ReplayAttemptRecord(id=7, mode="edited", state=ReplayAttemptRecord.State.COMPLETE)
+        payload = {"token": self.app.token, "headers_text": "Content-Type: text/plain\nX-Test: edited", "body_text": "new"}
+        result = call_wsgi(self.app, self.edit_environ(payload))
+        response = json.loads(result["body"])
+        self.assertEqual(result["status"], "200 OK")
+        self.assertTrue(response["ok"])
+        args, kwargs = replay.call_args
+        self.assertEqual(args[0].method, "POST")
+        self.assertEqual(args[0].url, "https://example.test/webhook")
+        self.assertEqual(kwargs["headers"], [["Content-Type", "text/plain"], ["X-Test", "edited"]])
+        self.assertEqual(kwargs["body"], b"new")
+        self.assertEqual(kwargs["mode"], "edited")
+        self.assertTrue(kwargs["allow_risky"])
+
+    @patch("django_http_inspector.inspector.app.replay_exchange")
+    def test_edit_replay_rejects_method_or_url_fields_before_attempt(self, replay):
+        payload = {"token": self.app.token, "headers_text": "", "body_text": "", "method": "DELETE"}
+        result = call_wsgi(self.app, self.edit_environ(payload))
+        self.assertEqual(result["status"], "400 Bad Request")
+        self.assertEqual(json.loads(result["body"])["code"], "unexpected_field")
+        replay.assert_not_called()
+
+    @patch("django_http_inspector.inspector.app.replay_exchange")
+    def test_binary_body_edit_is_rejected(self, replay):
+        self.exchange.request_body = b"\x00"
+        self.exchange.request_content_type = "application/octet-stream"
+        self.app.repository.update_exchange(self.exchange)
+        payload = {"token": self.app.token, "headers_text": "Content-Type: application/octet-stream", "body_text": ""}
+        result = call_wsgi(self.app, self.edit_environ(payload))
+        self.assertEqual(result["status"], "409 Conflict")
+        self.assertEqual(json.loads(result["body"])["field"], "body_text")
+        replay.assert_not_called()
 
     def test_clear_requires_token(self):
         result = call_wsgi(self.app, environ("/__inspect/clear", "POST", b"token=wrong"))

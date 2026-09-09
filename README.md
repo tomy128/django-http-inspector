@@ -63,6 +63,8 @@ WSGI servers normalize request data before applications see it. django-http-insp
 
 Replay causes real side effects. Treat payment, email, webhook, and mutation endpoints accordingly.
 
+The request stream refreshes automatically while the Inspector tab is visible. Select **Edit request** to change a replay copy's headers and textual body. The captured method and complete URL remain read-only and are always used as the replay target; binary and incomplete bodies cannot be edited. Duplicate headers are supported in the raw `Name: Value` editor.
+
 ## Development
 
 ```bash

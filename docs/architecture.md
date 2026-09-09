@@ -19,6 +19,8 @@ Outbound replay is modeled separately from inbound traffic:
 - `Exchange` describes an inbound request and its application response.
 - `ReplayAttempt` describes an outbound replay, including the sent snapshot, response or failure, selected peer address, and optional observed inbound exchange.
 
+Equivalent replay snapshots the captured headers and body. Edit & Replay accepts only a validated raw header list and textual body, then stores those edited values in an attempt with `mode="edited"`; method and URL are always loaded from the source Exchange. A lightweight JSON endpoint returns the latest 200 request summaries for the browser's visibility-aware polling loop, without transferring captured headers or bodies.
+
 This separation retains DNS/TLS/connect/timeout failures even when the request never returns to this Django process.
 
 A pending replay attempt must commit before any network operation. The inbound correlation claim and Exchange association commit atomically. Capture storage errors are logged without changing the business response; an unavailable repository leaves business traffic running and gives the isolated Inspector UI its own diagnostic response.
