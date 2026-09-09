@@ -71,12 +71,14 @@ Replay sends a real request and may cause side effects.
 
 新请求插入左侧顶部并更新计数，但当前选中的详情永不自动切换。编辑中的 Headers、Body、selection、光标与滚动位置不能被轮询触碰。新列表行只使用轻微状态进入效果；reduced motion 下立即出现。
 
+若当前 selected ID 仍在服务端快照中，保持列表选中态。若它因 Clear 或裁剪而消失，移除列表选中态，但保留右侧已渲染的只读内容或编辑草稿作为冻结快照；显示 `This capture was removed from Inspector storage.`，禁用 Replay、Edit、Reset 和提交。用户选择另一条现存请求后正常离开冻结状态。
+
 ## 4. 自动更新 API
 
 新增只读 endpoint：
 
 ```text
-GET /__inspect/api/exchanges?cursor=<opaque>&limit=200
+GET /__inspect/api/exchanges?cursor=<opaque>
 ```
 
 接口每次返回完整的最多 200 条轻量列表快照及 opaque cursor：
@@ -99,7 +101,9 @@ GET /__inspect/api/exchanges?cursor=<opaque>&limit=200
 }
 ```
 
-完整轻量快照能正确处理新增、pending 完成、裁剪和 Clear，不包含 headers/body，数据量可控。cursor 由快照中与列表展示相关的字段生成，用于客户端判断是否需要 DOM diff；未知 cursor 或 wrapper 重建不会漏数据。未来若数据规模证明有必要，再做真正增量传输。
+完整轻量快照固定为最新 200 条，`total` 是数据库内 Exchange 总数而非返回条数。它能正确处理新增、pending 完成、裁剪和 Clear，不包含 headers/body，数据量可控。
+
+0.1.2 的 cursor 只是 advisory：缺失、匹配、未知或格式无效时都返回 HTTP 200 和完整快照，不使用 304 或空数组。服务端只读取最长 256 字符；更长值按未知处理。cursor 是有序快照全部展示字段、行顺序及 `total` 的 canonical JSON SHA-256，因此任何会改变左侧 UI 的变化都会改变 cursor。客户端只有在 cursor 改变时执行 DOM diff。未来若数据规模证明有必要，再做真正增量传输。
 
 客户端规则：
 
@@ -132,18 +136,40 @@ Content-Type: application/json
 }
 ```
 
-服务端始终从原 Exchange 读取 Method 与完整 URL，不接受对应覆盖字段。JSON request body 上限为 `CAPTURE_MAX_BYTES` 加 256 KiB 的 headers/envelope 预算；超过上限返回 413，不做部分解析。新增 413 状态文本。
+服务端始终从原 Exchange 读取 Method 与完整 URL。JSON object 只允许 `token`、`headers_text`、`body_text` 三个必填 string 字段；出现 `method`、`url` 或任何未知字段返回 400 `unexpected_field`，类型或缺失错误返回 400 `invalid_payload`，均不创建 attempt。JSON request body 上限为 `CAPTURE_MAX_BYTES` 加 256 KiB 的 headers/envelope 预算；这是读取的 UTF-8 JSON bytes 上限，超过后返回 413，不做部分解析。新增 413 状态文本。
+
+Edit & Replay 的所有响应使用 `application/json; charset=utf-8`，统一结构：
+
+```json
+{
+  "ok": false,
+  "code": "invalid_header",
+  "message": "Header name is invalid on line 2.",
+  "field": "headers_text",
+  "line": 2,
+  "attempt": null,
+  "request_may_have_been_sent": false
+}
+```
+
+`field`、`line`、`attempt` 只在适用时出现。attempt 对象固定包含 `id`、`mode`、`state`、`response_status`、`error_stage` 和 `error_summary`。mutation failure 为 403 `forbidden`；malformed JSON、payload 类型/字段和编辑校验为 400；记录不存在为 404；body 不可编辑为 409；envelope 过大为 413；初始或最终持久化失败为 500。
+
+真实 transport 完成为 HTTP 200、`ok:true`、`code:"replay_complete"`。已持久化的 transport/target 失败仍为 HTTP 200、`ok:false`、`code:"replay_failed"` 并带 attempt。发送后的最终状态持久化失败为 500 `outcome_persistence_failed`，`request_may_have_been_sent:true`。
+
+普通 Replay 保持渐进增强基线：`application/x-www-form-urlencoded` 表单携带 hidden token，成功或失败均返回可读 HTML detail，不采用上述 JSON 契约。无 JavaScript 时仍可执行。
 
 ### 5.1 Headers 解析
 
 - 空行忽略；
 - 每个非空行必须含第一个 `:` 分隔符；
 - name 去除两端空白后必须符合 HTTP token 字符集合；
-- value 只去除分隔符后的一个可选前导空格，保留其余可见内容；
-- 拒绝 CR、LF 和其他控制字符；
+- value 只去除分隔符后的一个可选前导空格；必须可编码为 ISO-8859-1；
+- `\n` 仅作为 textarea 的行分隔符，任何 `\r`、行内 LF、NUL、DEL 和除 HTAB 外的 C0 控制字符均拒绝；
 - 保留顺序与重复 Header；
-- 限制 header 行数、单行长度和总字符数，分别为 200、16 KiB、256 KiB；
+- 限制 header 行数、单行 ISO-8859-1 bytes 和全部非空行 ISO-8859-1 bytes，分别为 200、16 KiB、256 KiB；
 - 解析错误返回 400 JSON，包含稳定 `code`、用户可读 `message` 和 1-based `line`，不创建 ReplayAttempt。
+
+上述字符与大小验证全部发生在创建 ReplayAttempt 前，确保 `http.client.putheader()` 不会因 Unicode 编码边界产生未归类异常。
 
 transport 继续移除 hop-by-hop headers、`Host`、`Content-Length` 与旧 correlation header，再根据实际 target/body 重建必要 header。UI 在编辑器下方常驻简短说明这一规范化行为。
 
@@ -157,13 +183,15 @@ transport 继续移除 hop-by-hop headers、`Host`、`Content-Length` 与旧 cor
 - `application/x-www-form-urlencoded`；
 - 空 Content-Type 但 bytes 可严格 UTF-8 解码。
 
-charset 从 Content-Type 参数读取；未声明时使用 UTF-8。未知 charset 或严格解码失败判定为不可编辑。提交时使用原始 charset 严格编码；编码失败返回 400，不发网。二进制 body 不提供 Base64 或替换字符编辑。
+零字节 body 始终可编辑，即使原 Content-Type 是二进制；默认使用 UTF-8，若存在可确定 charset 则使用该 charset。
+
+初次进入编辑模式的资格由原 Exchange 的 `request_content_type` 和原 bytes 决定。提交时先解析编辑后的 Headers：Content-Type 最多出现一次，重复或 malformed 值返回 400；使用标准库 `email.message.Message` 解析 media type、引号参数和 charset。编辑后的 Content-Type 必须仍属于上述文本类型或缺失，否则返回 400 `body_content_type`。charset 未声明时使用 UTF-8；未知 charset、严格解码或重新编码失败都在 attempt 创建前返回 400。这样实际 body bytes 与最终 Content-Type charset 保持一致。二进制 body 不提供 Base64 或替换字符编辑。
 
 ### 5.3 ReplayAttempt
 
-Edit & Replay 不修改 Exchange。创建 pending ReplayAttempt 时保存用户编辑后、transport 规范化前的 Headers 列表和编码后的 body bytes，Method/URL 来自原 Exchange。只有 pending attempt 成功 commit 后才允许真实 HTTP 发送；最终结果更新失败不自动重试。这些字段已存在于 SQLite schema version 1，0.1.2 不升级 schema。
+Edit & Replay 不修改 Exchange。创建 pending ReplayAttempt 时保存用户编辑后、transport 规范化前的 Headers 列表和编码后的 body bytes，Method/URL 来自原 Exchange。普通 replay 使用 `mode="equivalent"`，Edit & Replay 使用 `mode="edited"`；schema 的 mode 是自由 TEXT，因此 SQLite version 1 无需升级。只有 pending attempt 成功 commit 后才允许真实 HTTP 发送；最终结果更新失败不自动重试。
 
-普通 Replay 继续保存原始捕获快照，但不再依赖 `confirm=yes`。两个操作都复用同一 replay service，Edit & Replay 只在进入 service 前产生经过验证的替代 headers/body。
+普通 Replay 继续保存原始捕获快照。两个 POST endpoint 通过 mutation 校验后都以 `allow_risky=True` 调用共同 replay service，服务端不再读取或要求 `confirm` 字段。Edit & Replay 只在进入 service 前产生经过验证的替代 headers/body；service 的 method/url 参数只能来自 repository 重新加载的原 Exchange。
 
 ## 6. 组件边界
 
@@ -187,13 +215,13 @@ SQLite ReplayAttempt → real HTTP transport
 ## 7. 错误处理
 
 - Headers/body validation：400 JSON，保留编辑草稿，不创建 attempt；
-- JSON malformed：400 JSON；
+- JSON malformed/type/unknown fields：400 JSON；
 - request envelope 过大：413 JSON；
 - Exchange 不存在：404 JSON；
-- body 不可编辑：409 JSON，普通 Replay 不受影响；
+- 原 body 不可编辑：409 JSON，普通 Replay 不受影响；
 - pending attempt commit 失败：500 JSON，不调用 transport；
-- transport validation/network 失败：200 JSON 返回已持久化 attempt 状态，让 UI 显示 replay 失败；
-- 最终 attempt 更新失败：500 JSON 明确请求可能已经发送，绝不自动重试；
+- transport validation/network 失败：200 JSON、`ok:false`，返回已持久化 attempt；
+- 最终 attempt 更新失败：500 JSON、`request_may_have_been_sent:true`，绝不自动重试；
 - 自动刷新失败：不清空现有列表，切为 Reconnecting 并退避；
 - 自动刷新恢复：合并完整轻量快照，切回 Live。
 
@@ -212,12 +240,16 @@ SQLite ReplayAttempt → real HTTP transport
 - 轻量列表 endpoint 不包含 headers/body，带 `no-store`，并覆盖新增、pending 完成、裁剪和 Clear；
 - 客户端轮询只有一个 in-flight request，处理 Live/Reconnecting/Paused 和退避；
 - 自动更新不切换详情、不覆盖 tab/滚动/编辑草稿；
-- Method/URL 不出现在可编辑 payload 中，服务端忽略或拒绝伪造字段；
+- selected Exchange 被 prune/Clear 后保留冻结详情/草稿，移除选中态并禁用操作；
+- Method/URL 不出现在可编辑 payload 中，任何伪造或未知字段返回 `unexpected_field`；
 - Headers 原始文本解析覆盖重复项、空值、首个冒号、非法 name、控制字符、行数/单行/总大小；
 - 文本 body 覆盖 UTF-8、显式 charset、JSON/XML/form、空 Content-Type、未知 charset、编码失败；
+- 空 body、重复/malformed Content-Type、编辑后 Content-Type/charset 与编码一致性有测试；
 - 二进制、截断和 incomplete body 禁止编辑，但符合条件时仍可普通 Replay；
 - 编辑 validation 失败不创建 attempt、不调用 transport；
 - Edit & Replay 的 attempt 精确保存实际 Headers/body，原 Exchange 不变；
+- attempt mode 对普通 replay 为 equivalent、edited replay 为 edited；
+- mutation 校验后两种 replay 都以 `allow_risky=True` 调用 service，`confirm` 缺失或伪造不影响；
 - 真实 HTTP 端到端验证 edited headers/body 到达原 Method/URL，correlation 正确；
 - replay 完成/失败后草稿保留，Reset/Cancel/dirty navigation 行为正确；
 - 无 JavaScript 时页面仍可查看并执行普通 Replay；自动刷新与编辑作为增强能力；
