@@ -183,9 +183,11 @@ transport 继续移除 hop-by-hop headers、`Host`、`Content-Length` 与旧 cor
 - `application/x-www-form-urlencoded`；
 - 空 Content-Type 但 bytes 可严格 UTF-8 解码。
 
+初始化编辑器时解析原 Exchange 的 `request_content_type`：未声明 charset 使用 UTF-8；未知 charset 或严格解码失败则不可编辑，并在 UI/API 中呈现 409 资格原因。该初始解码规则独立于提交时依据 edited Content-Type 重新编码的规则。
+
 零字节 body 始终可编辑，即使原 Content-Type 是二进制；默认使用 UTF-8，若存在可确定 charset 则使用该 charset。
 
-初次进入编辑模式的资格由原 Exchange 的 `request_content_type` 和原 bytes 决定。提交时先解析编辑后的 Headers：Content-Type 最多出现一次，重复或 malformed 值返回 400；使用标准库 `email.message.Message` 解析 media type、引号参数和 charset。编辑后的 Content-Type 必须仍属于上述文本类型或缺失，否则返回 400 `body_content_type`。charset 未声明时使用 UTF-8；未知 charset、严格解码或重新编码失败都在 attempt 创建前返回 400。这样实际 body bytes 与最终 Content-Type charset 保持一致。二进制 body 不提供 Base64 或替换字符编辑。
+初次进入编辑模式的资格由原 Exchange 的 `request_content_type` 和原 bytes 决定。提交时先解析编辑后的 Headers：Content-Type 最多出现一次，重复或 malformed 值返回 400；使用标准库 `email.message.Message` 解析 media type、引号参数和 charset。非空 `body_text` 的 Content-Type 必须仍属于上述文本类型或缺失，否则返回 400 `body_content_type`；当 `body_text == ""` 且编码结果为零 bytes 时，允许任意合法 Content-Type，使空二进制请求可以原样提交和 Reset 后提交。charset 未声明时使用 UTF-8；未知 charset、严格解码或重新编码失败都在 attempt 创建前返回 400。这样实际 body bytes 与最终 Content-Type charset 保持一致。二进制 body 不提供 Base64 或替换字符编辑。
 
 ### 5.3 ReplayAttempt
 
@@ -244,7 +246,7 @@ SQLite ReplayAttempt → real HTTP transport
 - Method/URL 不出现在可编辑 payload 中，任何伪造或未知字段返回 `unexpected_field`；
 - Headers 原始文本解析覆盖重复项、空值、首个冒号、非法 name、控制字符、行数/单行/总大小；
 - 文本 body 覆盖 UTF-8、显式 charset、JSON/XML/form、空 Content-Type、未知 charset、编码失败；
-- 空 body、重复/malformed Content-Type、编辑后 Content-Type/charset 与编码一致性有测试；
+- 空 body（含 binary Content-Type 原样与 Reset 提交）、重复/malformed Content-Type、初始 charset fallback、编辑后 Content-Type/charset 与编码一致性有测试；
 - 二进制、截断和 incomplete body 禁止编辑，但符合条件时仍可普通 Replay；
 - 编辑 validation 失败不创建 attempt、不调用 transport；
 - Edit & Replay 的 attempt 精确保存实际 Headers/body，原 Exchange 不变；
