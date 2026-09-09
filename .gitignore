@@ -6,6 +6,7 @@ __pycache__/
 *.py[cod]
 .coverage
 htmlcov/
+.superpowers/
 test.sqlite3
 .django-http-inspector.sqlite3
 .django-http-inspector.sqlite3-shm
