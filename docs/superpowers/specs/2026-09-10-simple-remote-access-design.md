@@ -61,7 +61,9 @@ ALLOW_REMOTE=True
     → 任意 HTTP Host 和 REMOTE_ADDR 可访问 Inspector
 ```
 
-高级白名单字段不删除、不弃用。即使远程模式暂时忽略它们，配置加载仍验证其类型和 CIDR 格式，使关闭 `ALLOW_REMOTE` 后不会突然激活无效配置。现有的“客户端 CIDR 必须全部是 loopback”限制只在 `ALLOW_REMOTE=False` 时执行；否则合法的非 loopback CIDR 可以存在但不参与授权。
+高级白名单字段不删除、不弃用。两项都只接受由非空字符串组成的 `list` 或 `tuple`；字符串、mapping、set、generator、`None`、数字、空 Host 和非法 CIDR 均统一抛出 `ImproperlyConfigured`，不泄漏裸 `TypeError`，也不把一个字符串拆成字符。即使远程模式暂时忽略它们，配置加载仍验证这些类型与 CIDR 格式，使关闭 `ALLOW_REMOTE` 后不会突然激活无效配置。现有的“客户端 CIDR 必须全部是 loopback”限制只在 `ALLOW_REMOTE=False` 时执行；否则合法的非 loopback CIDR 可以存在但不参与授权。
+
+严格布尔验收矩阵为：未设置和字面量 `False` 关闭，只有字面量 `True` 开启；`"true"`、`"false"`、`1`、`0`、`None` 均以 `ImproperlyConfigured` 失败。特别使用 `type(value) is bool`，避免 Python 将 `bool` 的整数子类关系误当成合法配置。
 
 ## 5. 请求与变更操作安全
 
@@ -76,11 +78,11 @@ if config.allow_remote:
 
 `mutation_allowed()` 保持不变：Clear、普通 Replay 和 Edit & Replay 仍要求进程随机 token；存在 `Origin` 时必须与当前 scheme + Host 同源；存在 `Sec-Fetch-Site` 时只接受 `same-origin` 或 `none`。这些机制用于降低跨站请求伪造风险，不构成远程用户身份认证。能读取 Inspector 页面的人也能取得 token 并执行变更操作，这是 `ALLOW_REMOTE=True` 的明确语义。
 
-Replay 的 URL 仍只能来自捕获记录；只接受 HTTP(S)、不跟随 redirect、DNS 解析结果固定和 peer 分类检查不变。
+Replay 的 URL 仍只能来自捕获记录；只接受 HTTP(S)、不跟随 redirect，transport 连接固定到初次解析得到的地址。用户点击 Replay 本身允许访问 public、loopback、private、link-local、reserved 或 metadata target；这不是 SSRF 防护。只有初次分类为 public、实际连接 peer 却变为受限地址时才中止。`ALLOW_REMOTE` 不改变这些现有语义。
 
 ## 6. 警告与错误处理
 
-当 wrapper 初始化且 `ALLOW_REMOTE=True` 时，通过 `django_http_inspector` logger 输出一次 warning。单个 wrapper 实例只输出一次，文案明确：
+当 wrapper 初始化、配置加载成功且 `ENABLED=True`、`ALLOW_REMOTE=True` 时，在尝试初始化 storage 之前，通过名为 `django_http_inspector` 的 logger 输出一条 `WARNING`。因此即使 storage 初始化随后失败，风险提示仍然可见。单个 wrapper 实例只输出一次；`ENABLED=False` 或 `ALLOW_REMOTE=False`/未设置时不输出。文案明确：
 
 - Inspector 无认证；
 - 所有能连接服务的客户端可以读取捕获数据并触发 Replay；
@@ -93,7 +95,7 @@ Replay 的 URL 仍只能来自捕获记录；只接受 HTTP(S)、不跟随 redir
 - `config.py`：增加严格布尔解析与 `allow_remote` 字段；按模式调整 loopback-only 校验。
 - `inspector/security.py`：在 `request_allowed` 中增加显式远程分支。
 - `wrapper/wsgi.py`：初始化时输出一次风险 warning；不在每个请求重复记录。
-- Tests：覆盖配置、request authorization、mutation 不变性和 wrapper warning。
+- Tests：覆盖配置、request authorization、WSGI 路由集成、mutation 不变性和 wrapper warning。
 - README、`docs/security.md`、Changelog、发布文档与版本元数据同步到 0.1.3。
 
 数据捕获、独立 SQLite schema、模板、前端和 ReplayAttempt schema 均无需改变。
@@ -101,11 +103,11 @@ Replay 的 URL 仍只能来自捕获记录；只接受 HTTP(S)、不跟随 redir
 ## 8. 验收标准
 
 - 未配置时，loopback + 默认 Host 可以访问，任意非 loopback 或未知 Host 仍被拒绝；
-- `ALLOW_REMOTE=True` 时，非 loopback客户端和任意 Host 可以加载 UI、assets 和 JSON API；
-- 开启远程模式不会绕过 Clear/Replay/Edit & Replay 的 token、Origin 与 Fetch Metadata 校验；
-- `ALLOW_REMOTE=False` 时现有高级白名单继续工作；
-- `ALLOW_REMOTE` 非布尔值启动失败；
-- 远程模式初始化输出一次明确 warning；
+- WSGI 集成测试证明 `ALLOW_REMOTE=True` 时，非 loopback 客户端和未列入白名单的 Host 可以加载 index、包内 asset 和 JSON API；相同请求在 false/未设置时返回现有 403；
+- 远程模式分别验证 Clear、Replay、Edit & Replay：错误或缺失 token、跨站 Origin、被拒绝的 `Sec-Fetch-Site` 均失败；同源 Origin 配合 `same-origin` 以及没有 Origin 配合 `none` 的合法请求通过 mutation gate；测试用 mock 隔离真实副作用；
+- `ALLOW_REMOTE=False` 时自定义 Host 和 loopback CIDR 继续生效；`ALLOW_REMOTE=True` 接受合法非 loopback CIDR 但不使用它授权；两种模式下非法高级配置均失败；
+- 严格布尔矩阵全部通过；
+- 每个启用的远程 wrapper 实例恰好输出一条 `django_http_inspector` WARNING，false/未设置/disabled 不输出；storage 失败不吞掉该 warning；
 - 现有捕获、实时列表、Edit & Replay 和真实 HTTP Replay 测试无回归；
 - 0.1.3 wheel/sdist、Twine check 和全新环境安装通过。
 
