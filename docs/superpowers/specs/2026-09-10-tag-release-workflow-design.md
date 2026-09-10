@@ -32,7 +32,7 @@ Workflow 不设置跨版本 `concurrency`。每个 tag 产生独立 Run 和独�
 
 ## 4. Build Job
 
-Build Job 仅有 `contents: read`，使用 `ubuntu-latest`、固定完整提交 SHA 的 `actions/checkout`（`d23441a48e516b6c34aea4fa41551a30e30af803`，对应 v6，`persist-credentials: false`）和 `actions/setup-python`（`ece7cb06caefa5fff74198d8649806c4678c61a1`，对应 v6，Python 3.12）。执行：
+Build Job 仅有 `contents: read`，使用 `ubuntu-latest`、固定完整提交 SHA 的 `actions/checkout`（`de0fac2e4500dabe0009e67214ff5f5447ce83dd`，对应 v6.0.2，`persist-credentials: false`）和 `actions/setup-python`（`a309ff8b426b58ec0e2a45f0f869d46889d02405`，对应 v6.2.0，Python 3.12）。执行：
 
 1. 校验 tag/version 契约；
 2. `python -m pip install -e ".[dev]"`；
@@ -42,7 +42,7 @@ Build Job 仅有 `contents: read`，使用 `ubuntu-latest`、固定完整提交 
 6. Python 脚本校验 `dist/` 恰好包含 `django_http_inspector-<version>.tar.gz` 与 `django_http_inspector-<version>-py3-none-any.whl`，没有额外 artifact；
 7. 创建全新虚拟环境，仅安装刚构建的 wheel，验证公开包可导入、版本正确以及 Inspector 静态资源与模板随 wheel 安装；
 8. 从 workspace 根目录执行 `sha256sum dist/* > SHA256SUMS`，使摘要条目使用 `dist/<filename>` 相对路径；
-9. 固定完整提交 SHA 的 `actions/upload-artifact`（`043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`，对应 v7）一次性上传 `dist/` 与 `SHA256SUMS`，artifact 名为 `python-package-distributions`，找不到文件时失败，保留 14 天。
+9. 固定完整提交 SHA 的 `actions/upload-artifact`（`bbbca2ddaa5d8feaa63e36b76fdaad77386f024f`，对应 v7.0.0）一次性上传 `dist/` 与 `SHA256SUMS`，artifact 名为 `python-package-distributions`，找不到文件时失败，保留 14 天。
 
 测试与构建只发生一次。后续两个 Job 仅下载这份 artifact，不 checkout、不重新 build。
 

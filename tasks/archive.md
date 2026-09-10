@@ -1,5 +1,10 @@
 # 已归档任务
 
+## [已完成] 自动化 GitHub Release 与 PyPI 发布
+- 状态：已完成
+- 目标：推送版本标签后自动测试、构建、创建 GitHub Release 并通过 Trusted Publishing 上传 PyPI
+- 验收：0.1.5 三 Job Workflow、OIDC 最小权限、单次构建和 SHA-256 artifact 契约完成；93 个测试、actionlint、编译、构建、Twine、artifact 复验和全新环境 wheel 安装通过
+
 ## [已完成] 发布 0.1.4 请求展示优化
 - 状态：已完成
 - 目标：过滤 Chrome DevTools 探测噪声、统一 Edit & Replay 文案，并改善 multipart/form-data Body 展示

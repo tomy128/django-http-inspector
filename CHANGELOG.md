@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5 - 2026-09-10
+
+- Publish version tags through a least-privilege GitHub Actions workflow that builds distributions once, uploads them to PyPI with Trusted Publishing, and creates a GitHub Release from the same verified artifact.
+- Validate tag/version equality, package contents, fresh-wheel installation, and SHA-256 checksums before irreversible publishing steps.
+
 ## 0.1.4 - 2026-09-10
 
 - Present complete multipart/form-data bodies as ordered fields and file metadata without rendering binary file contents.

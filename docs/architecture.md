@@ -30,3 +30,7 @@ This separation retains DNS/TLS/connect/timeout failures even when the request n
 A pending replay attempt must commit before any network operation. The inbound correlation claim and Exchange association commit atomically. Capture storage errors are logged without changing the business response; an unavailable repository leaves business traffic running and gives the isolated Inspector UI its own diagnostic response.
 
 The WSGI implementation is deliberately first. ASGI support will share configuration, presentation, persistence, and replay services only after those boundaries have proven stable.
+
+## Release boundary
+
+Version tags are released through a three-stage GitHub Actions pipeline: a read-only Build Job tests and builds once, a PyPI Job publishes the verified artifact with short-lived OIDC credentials, and a GitHub Release Job runs only after PyPI succeeds. Both publishing Jobs consume the same SHA-256-verified artifact; neither checks out source or rebuilds distributions. This keeps project code execution separate from publishing permissions and makes the immutable package bytes traceable across both destinations.

@@ -1,84 +1,102 @@
-# Releasing to PyPI
+# Releasing to PyPI and GitHub
 
-The distribution name is `django-http-inspector`; the Python import package is `django_http_inspector`. The older `django-inspect` distribution and `django_inspect` import package belong to a different project.
+The distribution name is `django-http-inspector`; the import package is `django_http_inspector`. Releases are created automatically from immutable `v<version>` tags by `.github/workflows/release.yml`.
 
-PyPI names are first-come, first-served. A currently missing project page does not reserve the name, so publish promptly after the final check.
+## One-time repository setup
 
-## Prerequisites
+### 1. Create the GitHub Environment
 
-1. Create and verify a PyPI account.
-2. Enable two-factor authentication.
-3. Install release tools in an isolated environment:
+In `tomy128/django-http-inspector`, open **Settings → Environments → New environment** and create an environment named exactly `pypi`.
 
-   ```bash
-   python -m pip install --upgrade build twine
-   ```
+- Do not configure required reviewers or a wait timer; releases are intentionally automatic.
+- Under deployment branches and tags, restrict deployments to tags matching `v*`.
+- Do not add a PyPI token or other publishing secret.
 
-4. For a manual first release, create an account-scoped API token. After the project exists, replace it with a project-scoped token. Use `__token__` as the username when prompted.
+### 2. Configure PyPI Trusted Publishing
 
-Never commit a token or `.pypirc` containing credentials.
+On the PyPI project `django-http-inspector`, add a GitHub Trusted Publisher with these exact values:
 
-## Build and validate
+```text
+Owner:        tomy128
+Repository:   django-http-inspector
+Workflow:     release.yml
+Environment:  pypi
+```
 
-Run from the repository root on a clean commit:
+The Workflow uses short-lived OIDC credentials. It does not need `PYPI_API_TOKEN`, a repository secret, or `.pypirc` credentials.
+
+### 3. Protect release tags
+
+Recommended: create a GitHub Repository Ruleset targeting tags matching `v*`. Restrict tag creation, updates, and deletion to repository maintainers. Anyone who can modify the release Workflow and create a matching tag can initiate a PyPI release.
+
+## Publishing a version
+
+Prepare and merge a normal commit that updates both version declarations and the Changelog:
+
+```text
+pyproject.toml                         version = "0.1.5"
+src/django_http_inspector/__init__.py  __version__ = "0.1.5"
+CHANGELOG.md                           0.1.5 entry
+```
+
+Run the local checks before tagging:
 
 ```bash
 python tests/runtests.py
+python scripts/check_release.py tag --ref-type tag --ref-name v0.1.5
+# Ensure dist/ is empty before building.
 python -m build
 python -m twine check dist/*
+python scripts/check_release.py dist
 ```
 
-The tests use minimal Django settings without adding django-http-inspector to `INSTALLED_APPS` and without configuring a template backend. They verify automatic independent schema creation, process-reload persistence, concurrent initialization, package-resource rendering, and real HTTP replay. Inspect the wheel contents to confirm that templates and static assets are included and Django models or migrations are not.
+Push the release commit before its tag, then create the tag on that exact commit:
 
-The release must contain exactly one source archive and one universal wheel for the selected version:
+```bash
+git push origin master
+git tag v0.1.5
+git push origin v0.1.5
+```
+
+Do not move or reuse a pushed release tag. Wait for the **Release** Workflow Run to finish, then verify both the PyPI project and GitHub Release page. Different version tags may run independently; each uses its own artifact.
+
+## What the Workflow verifies
+
+The Build Job has read-only repository access and performs the irreversible-release gate:
+
+1. The ref is a tag and exactly equals `v` plus `pyproject.toml` version.
+2. The complete Django test suite passes.
+3. Build and Twine metadata checks pass.
+4. `dist/` contains exactly one expected wheel and one expected source archive.
+5. The wheel installs in a fresh environment and includes the public import, templates, and static resources.
+6. SHA-256 checksums are generated and the distribution files are uploaded once as a GitHub Actions artifact.
+
+The PyPI Job downloads and verifies that artifact, then publishes with Trusted Publishing. Only that Job receives `id-token: write`. After PyPI succeeds, the GitHub Release Job downloads and verifies the same artifact and creates generated release notes with the wheel, source archive, and `SHA256SUMS` attached.
+
+## Failure recovery
+
+PyPI releases and uploaded files are immutable. Never solve a failed release by moving a pushed tag, enabling `skip-existing`, or rebuilding files for the same Workflow Run.
+
+- **Build failed:** fix the source, increment the version, commit it, and create a new tag.
+- **PyPI failed before uploading any file:** fix the Environment, Trusted Publisher, OIDC, or temporary service issue, then rerun only the failed `publish-pypi` Job in the same Workflow Run. GitHub will subsequently run the skipped Release Job using the original artifact.
+- **PyPI uploaded only part of the distribution:** do not rerun the complete upload and do not use a long-lived token to patch it. Confirm the state on PyPI, increment the version, and release again.
+- **PyPI succeeded but GitHub Release failed:** rerun only `publish-github-release` in the same Workflow Run. If necessary, download that Run's `python-package-distributions` artifact, verify `SHA256SUMS`, and manually create the GitHub Release from those exact files.
+
+Artifacts are retained for 14 days, so investigate a partial failure promptly.
+
+## Manual diagnostics
+
+The Workflow is the production publishing path. These commands are for local package diagnosis only and must not be used to upload a production version:
+
+```bash
+python -m build
+python -m twine check dist/*
+python scripts/check_release.py dist
+```
+
+The expected files for `0.1.5` are:
 
 ```text
-dist/django_http_inspector-0.1.4.tar.gz
-dist/django_http_inspector-0.1.4-py3-none-any.whl
+dist/django_http_inspector-0.1.5.tar.gz
+dist/django_http_inspector-0.1.5-py3-none-any.whl
 ```
-
-Install the wheel into a fresh virtual environment and verify the public import before upload:
-
-```bash
-python -m venv /tmp/django-http-inspector-release-check
-/tmp/django-http-inspector-release-check/bin/python -m pip install dist/django_http_inspector-0.1.4-py3-none-any.whl
-/tmp/django-http-inspector-release-check/bin/python -c "from django_http_inspector import InspectorWSGI; print(InspectorWSGI)"
-```
-
-## Optional TestPyPI rehearsal
-
-TestPyPI has separate accounts and project names:
-
-```bash
-python -m twine upload --repository testpypi dist/*
-```
-
-Because Django comes from the main index, test installation normally needs both indexes:
-
-```bash
-python -m pip install \
-  --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
-  django-http-inspector==0.1.4
-```
-
-## Production upload
-
-Review the filenames and version one last time, then run:
-
-```bash
-python -m twine upload \
-  dist/django_http_inspector-0.1.4.tar.gz \
-  dist/django_http_inspector-0.1.4-py3-none-any.whl
-```
-
-PyPI releases are immutable: the same version cannot be uploaded again. Any correction requires a new version and a clean rebuild.
-
-After upload, verify from a fresh environment:
-
-```bash
-python -m pip install django-http-inspector==0.1.4
-python -c "from django_http_inspector import InspectorWSGI; print(InspectorWSGI)"
-```
-
-For later automated releases, prefer PyPI Trusted Publishing with short-lived OIDC credentials instead of storing a long-lived token in CI.
