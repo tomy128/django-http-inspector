@@ -4,7 +4,7 @@ django-http-inspector is an embedded HTTP traffic inspector for Django developme
 
 It is a development tool, not a reverse proxy, tunnel, production observability platform, or production security boundary.
 
-<img width="1920" height="992" alt="image" src="https://github.com/user-attachments/assets/dba91eab-4175-4586-a402-b7be59ef4f64" />
+![django-http-inspector request inspector](https://github.com/user-attachments/assets/dba91eab-4175-4586-a402-b7be59ef4f64)
 
 ## Installation
 

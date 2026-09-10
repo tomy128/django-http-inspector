@@ -56,5 +56,7 @@ class ReleaseWorkflowContractTests(SimpleTestCase):
         self.assertIn("name: pypi", self.workflow)
         self.assertIn("https://pypi.org/p/django-http-inspector", self.workflow)
         self.assertIn('gh release create "$GITHUB_REF_NAME"', self.workflow)
+        self.assertIn('--repo "$GITHUB_REPOSITORY"', self.workflow)
+        self.assertEqual(self.workflow.count("actions/checkout@"), 1)
         self.assertIn("release-artifact/SHA256SUMS", self.workflow)
         self.assertIn("--verify-tag", self.workflow)

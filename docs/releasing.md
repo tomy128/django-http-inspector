@@ -34,16 +34,16 @@ Recommended: create a GitHub Repository Ruleset targeting tags matching `v*`. Re
 Prepare and merge a normal commit that updates both version declarations and the Changelog:
 
 ```text
-pyproject.toml                         version = "0.1.5"
-src/django_http_inspector/__init__.py  __version__ = "0.1.5"
-CHANGELOG.md                           0.1.5 entry
+pyproject.toml                         version = "0.1.6"
+src/django_http_inspector/__init__.py  __version__ = "0.1.6"
+CHANGELOG.md                           0.1.6 entry
 ```
 
 Run the local checks before tagging:
 
 ```bash
 python tests/runtests.py
-python scripts/check_release.py tag --ref-type tag --ref-name v0.1.5
+python scripts/check_release.py tag --ref-type tag --ref-name v0.1.6
 # Ensure dist/ is empty before building.
 python -m build
 python -m twine check dist/*
@@ -54,8 +54,8 @@ Push the release commit before its tag, then create the tag on that exact commit
 
 ```bash
 git push origin master
-git tag v0.1.5
-git push origin v0.1.5
+git tag v0.1.6
+git push origin v0.1.6
 ```
 
 Do not move or reuse a pushed release tag. Wait for the **Release** Workflow Run to finish, then verify both the PyPI project and GitHub Release page. Different version tags may run independently; each uses its own artifact.
@@ -94,9 +94,9 @@ python -m twine check dist/*
 python scripts/check_release.py dist
 ```
 
-The expected files for `0.1.5` are:
+The expected files for `0.1.6` are:
 
 ```text
-dist/django_http_inspector-0.1.5.tar.gz
-dist/django_http_inspector-0.1.5-py3-none-any.whl
+dist/django_http_inspector-0.1.6.tar.gz
+dist/django_http_inspector-0.1.6-py3-none-any.whl
 ```

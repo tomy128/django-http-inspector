@@ -1,5 +1,10 @@
 # 已归档任务
 
+## [已完成] 发布 0.1.6 Release 修复
+- 状态：已完成
+- 目标：修复无 checkout 的 GitHub Release 创建失败，并让 README 截图保持比例自适应
+- 验收：Release 显式指定 GITHUB_REPOSITORY 且仍无 checkout；README 使用 Markdown 自适应图片；93 个测试、actionlint、编译、构建、Twine 和全新环境 wheel 安装通过
+
 ## [已完成] 自动化 GitHub Release 与 PyPI 发布
 - 状态：已完成
 - 目标：推送版本标签后自动测试、构建、创建 GitHub Release 并通过 Trusted Publishing 上传 PyPI

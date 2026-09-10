@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6 - 2026-09-10
+
+- Fix GitHub Release creation in the checkout-free publish job by explicitly selecting the repository.
+- Let the README screenshot scale responsively at its intrinsic aspect ratio on GitHub and PyPI.
+
 ## 0.1.5 - 2026-09-10
 
 - Publish version tags through a least-privilege GitHub Actions workflow that builds distributions once, uploads them to PyPI with Trusted Publishing, and creates a GitHub Release from the same verified artifact.
