@@ -2,6 +2,8 @@
 
 django-http-inspector wraps the project's WSGI application. It routes `/__inspect/*` to a small package-owned WSGI application before Django's middleware and sends every other request directly to the original Django application.
 
+Inspector access is local-only by default and checks both Host and client CIDR. The explicit `ALLOW_REMOTE=True` development mode bypasses those two read-access checks so any client able to reach the server can use the package-owned UI and API. It does not change business routing, mutation request-forgery checks, or replay target handling.
+
 ```text
 WSGI server
   ↓

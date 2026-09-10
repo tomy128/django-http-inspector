@@ -10,7 +10,9 @@ django-http-inspector stores request and response bodies, headers, cookies, cred
 - State-changing actions require a random process token and validate available `Origin` and `Sec-Fetch-Site` headers.
 - Captured content is escaped before HTML rendering.
 
-The MVP intentionally rejects non-loopback client CIDRs because authentication for remotely exposed Inspector sessions is not implemented yet.
+The default mode intentionally rejects non-loopback client CIDRs because authenticated remote Inspector sessions are not implemented.
+
+For trusted development networks, `ALLOW_REMOTE=True` intentionally bypasses Inspector Host and client CIDR checks. This mode has no authentication: every client that can reach the listening port can read captured secrets and obtain the token used by Clear and Replay actions. Enabling it emits a startup warning. Do not combine it with a public bind, port forwarding, a public tunnel, shared Wi-Fi, or any untrusted network.
 
 ## Replay
 

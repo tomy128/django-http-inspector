@@ -11,6 +11,7 @@ from django.core.exceptions import ImproperlyConfigured
 @dataclass(frozen=True)
 class InspectConfig:
     enabled: bool
+    allow_remote: bool
     path: str
     capture_max_bytes: int
     max_records: int
@@ -44,11 +45,18 @@ def _positive_number(value: object, name: str, number_type):
     return value
 
 
+def _boolean(value: object, name: str) -> bool:
+    if type(value) is not bool:
+        raise ImproperlyConfigured(f"DJANGO_HTTP_INSPECTOR[{name!r}] must be a boolean.")
+    return value
+
+
 def load_config() -> InspectConfig:
     raw = getattr(settings, "DJANGO_HTTP_INSPECTOR", {})
     if not isinstance(raw, dict):
         raise ImproperlyConfigured("DJANGO_HTTP_INSPECTOR must be a dictionary.")
 
+    allow_remote = _boolean(raw.get("ALLOW_REMOTE", False), "ALLOW_REMOTE")
     trusted = tuple(raw.get("TRUSTED_PROXY_CIDRS", ()))
     clients = tuple(raw.get("INSPECTOR_ALLOWED_CLIENT_CIDRS", ("127.0.0.0/8", "::1/128")))
     try:
@@ -56,7 +64,7 @@ def load_config() -> InspectConfig:
             ip_network(cidr, strict=False)
     except (TypeError, ValueError) as exc:
         raise ImproperlyConfigured(f"Invalid django-http-inspector CIDR: {exc}") from exc
-    if any(not ip_network(cidr, strict=False).is_loopback for cidr in clients):
+    if not allow_remote and any(not ip_network(cidr, strict=False).is_loopback for cidr in clients):
         raise ImproperlyConfigured(
             "MVP Inspector access is loopback-only; non-loopback authentication is not implemented."
         )
@@ -78,6 +86,7 @@ def load_config() -> InspectConfig:
 
     return InspectConfig(
         enabled=bool(raw.get("ENABLED", settings.DEBUG)),
+        allow_remote=allow_remote,
         path=_path(raw.get("PATH", "/__inspect/"), "PATH"),
         capture_max_bytes=_positive_number(raw.get("CAPTURE_MAX_BYTES", 1024 * 1024), "CAPTURE_MAX_BYTES", int),
         max_records=_positive_number(raw.get("MAX_RECORDS", 1000), "MAX_RECORDS", int),

@@ -20,6 +20,8 @@ def client_allowed(remote_addr, cidrs):
 
 
 def request_allowed(environ, config):
+    if config.allow_remote:
+        return True
     host = host_without_port(str(environ.get("HTTP_HOST", "")))
     allowed_hosts = {host_without_port(item) for item in config.inspector_allowed_hosts}
     return host in allowed_hosts and client_allowed(

@@ -1,4 +1,5 @@
 from django.core.wsgi import get_wsgi_application
+from django.conf import settings
 from django.test import SimpleTestCase
 from django.test import override_settings
 import sqlite3
@@ -59,6 +60,34 @@ class WrapperTests(IsolatedStorageMixin, SimpleTestCase):
             result = call_wsgi(app, environ("/__inspect/"))
             self.assertEqual(result["status"], "500 Internal Server Error")
             self.assertIn(b"storage unavailable", result["body"])
+
+    def test_remote_access_warns_once_per_enabled_wrapper(self):
+        configured = {**settings.DJANGO_HTTP_INSPECTOR, "ALLOW_REMOTE": True}
+        with override_settings(DJANGO_HTTP_INSPECTOR=configured):
+            with self.assertLogs("django_http_inspector", level="WARNING") as caught:
+                InspectorWSGI(get_wsgi_application())
+            self.assertEqual(len(caught.records), 1)
+            self.assertIn("without authentication", caught.records[0].getMessage())
+
+    def test_disabled_remote_config_does_not_warn(self):
+        configured = {**settings.DJANGO_HTTP_INSPECTOR, "ENABLED": False, "ALLOW_REMOTE": True}
+        with override_settings(DJANGO_HTTP_INSPECTOR=configured):
+            with self.assertNoLogs("django_http_inspector", level="WARNING"):
+                InspectorWSGI(get_wsgi_application())
+
+    def test_remote_warning_precedes_storage_failure(self):
+        bad_path = self.storage_path.parent / "remote-newer.sqlite3"
+        connection = sqlite3.connect(bad_path)
+        connection.execute("PRAGMA user_version=99")
+        connection.close()
+        with override_settings(DJANGO_HTTP_INSPECTOR={
+            "ENABLED": True, "ALLOW_REMOTE": True, "SQLITE_PATH": bad_path,
+        }):
+            with self.assertLogs("django_http_inspector", level="WARNING") as caught:
+                InspectorWSGI(get_wsgi_application())
+        self.assertEqual(caught.records[0].levelname, "WARNING")
+        self.assertIn("without authentication", caught.records[0].getMessage())
+        self.assertEqual(caught.records[1].levelname, "ERROR")
 
     def test_capture_does_not_create_or_open_business_database(self):
         business_path = self.storage_path.parent / "business.sqlite3"

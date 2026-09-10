@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 - 2026-09-10
+
+- Add a single `ALLOW_REMOTE=True` switch for unauthenticated Inspector access from any client that can reach the development server.
+- Keep local-only access as the default and emit a clear warning when remote access is enabled.
+- Preserve the existing advanced Host and client CIDR configuration for local-only mode.
+
 ## 0.1.2 - 2026-09-09
 
 - Remove the per-replay acknowledgement checkbox and keep the side-effect warning beside the action.

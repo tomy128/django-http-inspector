@@ -31,6 +31,8 @@ Open `http://127.0.0.1:8000/__inspect/`.
 ```python
 DJANGO_HTTP_INSPECTOR = {
     "ENABLED": DEBUG,
+    # Set True only on a trusted development network. No authentication is added.
+    "ALLOW_REMOTE": False,
     "PATH": "/__inspect/",
     "CAPTURE_MAX_BYTES": 1024 * 1024,
     "MAX_RECORDS": 1000,
@@ -44,6 +46,20 @@ DJANGO_HTTP_INSPECTOR = {
 ```
 
 django-http-inspector is disabled by default when `DEBUG=False`. The MVP Inspector UI is loopback-only.
+
+To access Inspector from another device during development, use the single explicit switch and make Django listen on the network:
+
+```python
+DJANGO_HTTP_INSPECTOR = {
+    "ALLOW_REMOTE": True,
+}
+```
+
+```bash
+python manage.py runserver 0.0.0.0:8000
+```
+
+Then open `http://<development-machine-ip>:8000/__inspect/`. Remote mode has no authentication: anyone who can connect can read captured credentials and bodies and trigger real Replay requests. Never expose it to the public internet or an untrusted network. The advanced `INSPECTOR_ALLOWED_HOSTS` and `INSPECTOR_ALLOWED_CLIENT_CIDRS` settings remain available for the default local-only mode but are not needed when `ALLOW_REMOTE=True`.
 
 Inspector records live in a package-managed SQLite database, not in Django's business database. You do not need to add the package to `INSTALLED_APPS` or run migrations. The file survives `runserver` reloads; delete it to reset all Inspector history.
 

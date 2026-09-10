@@ -11,6 +11,12 @@ class InspectorWSGI:
         self.application = application
         self.config = load_config()
         self.token = secrets.token_urlsafe(32)
+        if self.config.enabled and self.config.allow_remote:
+            logging.getLogger("django_http_inspector").warning(
+                "django-http-inspector remote access is enabled without authentication; "
+                "any client that can reach this server can read captured data and trigger replay. "
+                "Do not expose it to the public internet or untrusted networks."
+            )
         from django_http_inspector.storage import InspectorRepository, UnavailableRepository
 
         try:

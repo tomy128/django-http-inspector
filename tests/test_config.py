@@ -7,6 +7,16 @@ from django_http_inspector.config import load_config
 
 
 class ConfigTests(SimpleTestCase):
+    def test_allow_remote_is_strict_boolean(self):
+        self.assertFalse(load_config().allow_remote)
+        for value in (True, False):
+            with self.subTest(value=value), override_settings(DJANGO_HTTP_INSPECTOR={"ALLOW_REMOTE": value}):
+                self.assertIs(load_config().allow_remote, value)
+        for value in ("true", "false", 1, 0, None):
+            with self.subTest(value=value), override_settings(DJANGO_HTTP_INSPECTOR={"ALLOW_REMOTE": value}):
+                with self.assertRaisesMessage(Exception, "must be a boolean"):
+                    load_config()
+
     def test_path_boundary(self):
         config = load_config()
         self.assertTrue(config.is_inspector_path("/__inspect"))
@@ -22,6 +32,26 @@ class ConfigTests(SimpleTestCase):
     def test_non_loopback_access_requires_future_auth_support(self):
         with self.assertRaisesMessage(Exception, "loopback-only"):
             load_config()
+
+    @override_settings(DJANGO_HTTP_INSPECTOR={
+        "ALLOW_REMOTE": True,
+        "INSPECTOR_ALLOWED_CLIENT_CIDRS": ["10.0.0.0/8"],
+        "INSPECTOR_ALLOWED_HOSTS": ["internal.test"],
+    })
+    def test_remote_mode_keeps_valid_advanced_config_but_skips_loopback_requirement(self):
+        config = load_config()
+        self.assertTrue(config.allow_remote)
+        self.assertEqual(config.inspector_allowed_client_cidrs, ("10.0.0.0/8",))
+        self.assertEqual(config.inspector_allowed_hosts, ("internal.test",))
+
+    @override_settings(DJANGO_HTTP_INSPECTOR={
+        "INSPECTOR_ALLOWED_CLIENT_CIDRS": (item for item in ["127.0.0.0/8"]),
+        "INSPECTOR_ALLOWED_HOSTS": (item for item in ["localhost"]),
+    })
+    def test_existing_iterable_advanced_config_remains_supported(self):
+        config = load_config()
+        self.assertEqual(config.inspector_allowed_client_cidrs, ("127.0.0.0/8",))
+        self.assertEqual(config.inspector_allowed_hosts, ("localhost",))
 
     def test_relative_sqlite_path_is_resolved_from_base_dir(self):
         with TemporaryDirectory() as directory, override_settings(
