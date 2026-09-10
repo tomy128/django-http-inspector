@@ -61,7 +61,7 @@ ALLOW_REMOTE=True
     → 任意 HTTP Host 和 REMOTE_ADDR 可访问 Inspector
 ```
 
-高级白名单字段不删除、不弃用。两项都只接受由非空字符串组成的 `list` 或 `tuple`；字符串、mapping、set、generator、`None`、数字、空 Host 和非法 CIDR 均统一抛出 `ImproperlyConfigured`，不泄漏裸 `TypeError`，也不把一个字符串拆成字符。即使远程模式暂时忽略它们，配置加载仍验证这些类型与 CIDR 格式，使关闭 `ALLOW_REMOTE` 后不会突然激活无效配置。现有的“客户端 CIDR 必须全部是 loopback”限制只在 `ALLOW_REMOTE=False` 时执行；否则合法的非 loopback CIDR 可以存在但不参与授权。
+高级白名单字段不删除、不弃用，其既有 iterable 转换、Host 检查、CIDR 解析和错误行为保持不变；本任务不借机收窄或重构已发布的高级配置接口。即使远程模式暂时忽略它们，配置加载仍执行现有格式验证，使关闭 `ALLOW_REMOTE` 后不会突然激活无效配置。现有的“客户端 CIDR 必须全部是 loopback”限制只在 `ALLOW_REMOTE=False` 时执行；否则合法的非 loopback CIDR 可以存在但不参与授权。
 
 严格布尔验收矩阵为：未设置和字面量 `False` 关闭，只有字面量 `True` 开启；`"true"`、`"false"`、`1`、`0`、`None` 均以 `ImproperlyConfigured` 失败。特别使用 `type(value) is bool`，避免 Python 将 `bool` 的整数子类关系误当成合法配置。
 
@@ -88,7 +88,7 @@ Replay 的 URL 仍只能来自捕获记录；只接受 HTTP(S)、不跟随 redir
 - 所有能连接服务的客户端可以读取捕获数据并触发 Replay；
 - 不应暴露到公网或不受信任网络。
 
-无效布尔值或无效高级配置继续在初始化阶段以 `ImproperlyConfigured` 失败，不静默降级。访问拒绝仍返回现有 `403 Inspector access denied.`。
+无效布尔值以 `ImproperlyConfigured` 失败；高级配置保持当前的初始化失败类型和行为，不静默降级。访问拒绝仍返回现有 `403 Inspector access denied.`。
 
 ## 7. 技术实现路径
 
@@ -105,7 +105,7 @@ Replay 的 URL 仍只能来自捕获记录；只接受 HTTP(S)、不跟随 redir
 - 未配置时，loopback + 默认 Host 可以访问，任意非 loopback 或未知 Host 仍被拒绝；
 - WSGI 集成测试证明 `ALLOW_REMOTE=True` 时，非 loopback 客户端和未列入白名单的 Host 可以加载 index、包内 asset 和 JSON API；相同请求在 false/未设置时返回现有 403；
 - 远程模式分别验证 Clear、Replay、Edit & Replay：错误或缺失 token、跨站 Origin、被拒绝的 `Sec-Fetch-Site` 均失败；同源 Origin 配合 `same-origin` 以及没有 Origin 配合 `none` 的合法请求通过 mutation gate；测试用 mock 隔离真实副作用；
-- `ALLOW_REMOTE=False` 时自定义 Host 和 loopback CIDR 继续生效；`ALLOW_REMOTE=True` 接受合法非 loopback CIDR 但不使用它授权；两种模式下非法高级配置均失败；
+- `ALLOW_REMOTE=False` 时自定义 Host 和 loopback CIDR 继续生效；`ALLOW_REMOTE=True` 接受合法非 loopback CIDR但不使用它授权；既有 iterable 高级配置用法没有回归；
 - 严格布尔矩阵全部通过；
 - 每个启用的远程 wrapper 实例恰好输出一条 `django_http_inspector` WARNING，false/未设置/disabled 不输出；storage 失败不吞掉该 warning；
 - 现有捕获、实时列表、Edit & Replay 和真实 HTTP Replay 测试无回归；
