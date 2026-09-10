@@ -28,7 +28,7 @@
 
 ## 3. Multipart 识别与解析
 
-只有 media type 大小写不敏感地等于 `multipart/form-data`、body 完整且 Content-Type 提供唯一非空 boundary 时才尝试解析；quoted boundary 合法。实现使用 `email.parser.BytesParser(policy=email.policy.default)`，在 body 前构造仅含 `MIME-Version: 1.0` 和原始 `Content-Type` 的顶层 headers。解析前验证 boundary 唯一、非空、ASCII、1–70 字节且不含 CR/LF。解析函数返回纯数据而非 HTML：
+只有 media type 大小写不敏感地等于 `multipart/form-data`、body 完整且 Content-Type 提供唯一非空 boundary 时才尝试解析；quoted boundary 合法。实现使用 `email.parser.BytesParser(policy=email.policy.default)`，在 body 前构造仅含 `MIME-Version: 1.0` 和原始 `Content-Type` 的顶层 headers。拼接前拒绝整个 Content-Type 中的 CR/LF；并验证 boundary 唯一、非空、ASCII、1–70 字节。解析函数返回纯数据而非 HTML：
 
 ```text
 kind: field | file
@@ -45,7 +45,7 @@ size: non-negative int    # file only，parser 解码后的捕获内容 bytes
 
 调用 parser 前设置 1 MiB body 硬上限，超过即回退。解析后最多 200 parts；单个 name/filename/Content-Type 最多 1 KiB Unicode code points；单个文本 value 最多 256 KiB；全部文本 value 最多 512 KiB。任何超限整体回退。1 MiB 输入上限保证 MIME tree 构造有界；nested multipart 一律拒绝且不递归。这些限制只影响预览，不影响保存或 Replay。
 
-顶层与每个 part 的 `defects` 必须为空。原始 body 必须包含合法起始 delimiter，并以 closing delimiter 后仅跟可选 CRLF 结束；缺 start/close、close 后仍有 delimiter、非空 preamble/epilogue均回退。只接受 CRLF delimiter framing。文件内容中的 boundary-like bytes 只有符合完整 CRLF delimiter grammar 时才可分隔。
+顶层与每个 part 的 `defects` 必须为空。包含 parts 时，原始 body 必须有起始 delimiter，并以 closing delimiter 后仅跟可选 CRLF 结束；零-part 表单允许唯一 boundary line 直接是 `--boundary--` 加可选 CRLF，此 closing delimiter 同时满足起始要求。缺 start/close、close 后仍有 delimiter、非空 preamble/epilogue均回退。只接受 CRLF delimiter framing。文件内容中的 boundary-like bytes 只有符合完整 CRLF delimiter grammar 时才可分隔。
 
 ## 4. 截断、不完整与回退
 
@@ -104,4 +104,4 @@ Repository 仍保存原始 bytes，普通 Replay 必须逐字节发送原捕获 
 
 ## 10. 风险与演进
 
-标准库 MIME parser 可能宽容接受边缘格式，因此解析后必须再次验证 disposition、name、nested type 和完整结构。UI 必须把 size 表述为捕获 payload size。后续只有在真实需求出现后才设计 Raw 切换或受限下载。
+标准库 MIME parser 可能宽容接受边缘格式，因此解析后必须再次验证 disposition、name、nested type 和完整结构。UI 必须把 size 表述为 `captured content size`。后续只有在真实需求出现后才设计 Raw 切换或受限下载。
