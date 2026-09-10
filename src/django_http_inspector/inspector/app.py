@@ -132,20 +132,30 @@ class InspectorApp:
     def context(self, selected=None, message=""):
         exchanges = self.repository.list_exchanges(limit=200)
         body = body_kind = response_body = response_kind = ""
+        request_parts = response_parts = None
         attempts = []
         edit_allowed = False
         edit_body = edit_reason = ""
         if selected:
-            body, body_kind = present_body(selected.request_body, selected.request_content_type)
+            body, body_kind, request_parts = present_body(
+                selected.request_body,
+                selected.request_content_type,
+                complete=not (selected.request_body_truncated or selected.request_body_incomplete),
+            )
             response_content_type = next((v for n, v in selected.response_headers if n.lower() == "content-type"), "")
-            response_body, response_kind = present_body(selected.response_body, response_content_type)
+            response_body, response_kind, response_parts = present_body(
+                selected.response_body,
+                response_content_type,
+                complete=not (selected.response_body_truncated or selected.response_body_incomplete),
+            )
             attempts = self.repository.list_attempts(selected.id, limit=20)
             edit_allowed, edit_body, edit_reason = editable_body(selected)
         _, total, cursor = self.lightweight_snapshot()
         return {
             "base": self.base, "token": self.token, "exchanges": exchanges, "exchange_total": total,
             "list_cursor": cursor, "selected": selected, "request_body": body, "request_body_kind": body_kind,
-            "response_body": response_body, "response_body_kind": response_kind, "attempts": attempts,
+            "request_multipart_parts": request_parts, "response_body": response_body,
+            "response_body_kind": response_kind, "response_multipart_parts": response_parts, "attempts": attempts,
             "can_replay": bool(selected and can_replay(selected)),
             "can_edit": bool(selected and can_replay(selected) and edit_allowed), "edit_reason": edit_reason,
             "edit_headers": headers_to_text(selected.request_headers) if selected else "", "edit_body": edit_body,

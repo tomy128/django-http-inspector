@@ -49,6 +49,12 @@ class ReplayEditTests(SimpleTestCase):
         self.assertFalse(allowed)
         self.assertIn("not captured completely", reason)
 
+    def test_multipart_body_is_not_editable_even_when_utf8(self):
+        exchange = self.exchange(b"--b--\r\n", "multipart/form-data; boundary=b")
+        allowed, _, reason = editable_body(exchange)
+        self.assertFalse(allowed)
+        self.assertIn("Binary", reason)
+
     def test_empty_binary_body_is_editable_but_cannot_become_nonempty(self):
         self.assertTrue(editable_body(self.exchange(b"", "application/octet-stream"))[0])
         self.assertEqual(encode_edited_body([["Content-Type", "application/octet-stream"]], ""), b"")

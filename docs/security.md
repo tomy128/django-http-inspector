@@ -2,6 +2,8 @@
 
 django-http-inspector stores request and response bodies, headers, cookies, credentials, and personal data. Use it only in controlled development environments and configure short retention.
 
+Multipart presentation does not redact text fields based on names such as password, token, or csrfmiddlewaretoken. File contents are not rendered, but remain stored in the Inspector SQLite database up to the configured capture limit and may be sent by Replay.
+
 ## Inspector access
 
 - Disabled by default when `DEBUG=False`.

@@ -37,7 +37,7 @@
         <div class="replay-actions">
           <p class="side-effect-note">Replay sends a real request and may cause side effects.</p>
           <div class="button-row">
-            <button class="button button-quiet" type="button" data-edit-request data-capture-action {% if not can_edit %}disabled title="{{ edit_reason|default:'The request body cannot be edited.' }}"{% endif %}>Edit request</button>
+            <button class="button button-quiet" type="button" data-edit-request data-capture-action {% if not can_edit %}disabled title="{{ edit_reason|default:'The request body cannot be edited.' }}"{% endif %}>Edit &amp; Replay</button>
             <form action="{{ base }}/requests/{{ selected.id }}/replay" method="post">
               <input type="hidden" name="token" value="{{ token }}">
               <button class="button button-primary" type="submit" data-capture-action {% if not can_replay %}disabled title="The request body was not captured completely."{% endif %}>Replay request</button>
@@ -62,7 +62,7 @@
       <div class="tab-panel" data-panel="request">
         <div data-request-view>
           <section class="data-section"><h3>Headers</h3><dl class="headers">{% for name, value in selected.request_headers %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% empty %}<dd>None</dd>{% endfor %}</dl></section>
-          <section class="data-section"><h3>Body <span>{{ request_body_kind }}</span></h3><pre>{{ request_body }}</pre></section>
+          <section class="data-section"><h3>Body <span>{{ request_body_kind }}</span></h3>{% if request_multipart_parts != None %}<dl class="multipart">{% for part in request_multipart_parts %}<dt>{{ part.name }}</dt><dd>{% if part.kind == "file" %}<span class="file-meta"><strong>{{ part.filename|default:"Unnamed file" }}</strong> · {{ part.content_type }} · {{ part.size }} B captured content</span>{% else %}<pre>{{ part.value }}</pre>{% endif %}</dd>{% empty %}<dd class="multipart-empty">No form fields</dd>{% endfor %}</dl>{% else %}<pre>{{ request_body }}</pre>{% endif %}</section>
         </div>
         {% if can_edit %}
           <form class="edit-replay" data-edit-form data-endpoint="{{ base }}/requests/{{ selected.id }}/edit-replay" hidden>
@@ -88,8 +88,9 @@
         {% endif %}
       </div>
       <div class="tab-panel" data-panel="response" hidden>
+        {% if selected.response_body_truncated or selected.response_body_incomplete %}<div class="panel-warning">Response body preview is incomplete.</div>{% endif %}
         <section class="data-section"><h3>Headers</h3><dl class="headers">{% for name, value in selected.response_headers %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% empty %}<dd>None</dd>{% endfor %}</dl></section>
-        <section class="data-section"><h3>Body <span>{{ response_body_kind }}</span></h3><pre>{{ response_body }}</pre></section>
+        <section class="data-section"><h3>Body <span>{{ response_body_kind }}</span></h3>{% if response_multipart_parts != None %}<dl class="multipart">{% for part in response_multipart_parts %}<dt>{{ part.name }}</dt><dd>{% if part.kind == "file" %}<span class="file-meta"><strong>{{ part.filename|default:"Unnamed file" }}</strong> · {{ part.content_type }} · {{ part.size }} B captured content</span>{% else %}<pre>{{ part.value }}</pre>{% endif %}</dd>{% empty %}<dd class="multipart-empty">No form fields</dd>{% endfor %}</dl>{% else %}<pre>{{ response_body }}</pre>{% endif %}</section>
       </div>
       {% if attempts %}<section class="attempts"><h3>Replay attempts</h3>{% for attempt in attempts %}<div><strong>{{ attempt.state }}</strong> · {{ attempt.mode }} · {{ attempt.response_status|default:attempt.error_stage }} · {{ attempt.submitted_at }}</div>{% endfor %}</section>{% endif %}
     {% else %}

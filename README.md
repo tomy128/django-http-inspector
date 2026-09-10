@@ -36,7 +36,11 @@ DJANGO_HTTP_INSPECTOR = {
     "PATH": "/__inspect/",
     "CAPTURE_MAX_BYTES": 1024 * 1024,
     "MAX_RECORDS": 1000,
-    "EXCLUDE_PATHS": ["/static/", "/favicon.ico"],
+    "EXCLUDE_PATHS": [
+        "/static/",
+        "/favicon.ico",
+        "/.well-known/appspecific/com.chrome.devtools.json",
+    ],
     "TRUSTED_PROXY_CIDRS": [],
     "INSPECTOR_ALLOWED_HOSTS": ["localhost", "127.0.0.1", "[::1]"],
     "REPLAY_TIMEOUT": 10,
@@ -79,7 +83,11 @@ WSGI servers normalize request data before applications see it. django-http-insp
 
 Replay causes real side effects. Treat payment, email, webhook, and mutation endpoints accordingly.
 
-The request stream refreshes automatically while the Inspector tab is visible. Select **Edit request** to change a replay copy's headers and textual body. The captured method and complete URL remain read-only and are always used as the replay target; binary and incomplete bodies cannot be edited. Duplicate headers are supported in the raw `Name: Value` editor.
+The request stream refreshes automatically while the Inspector tab is visible. Select **Edit & Replay** to change a replay copy's headers and textual body. The captured method and complete URL remain read-only and are always used as the replay target; binary, multipart, and incomplete bodies cannot be edited. Duplicate headers are supported in the raw `Name: Value` editor.
+
+Complete `multipart/form-data` bodies are presented as ordered form fields. File parts show only their filename, media type, and captured-content size; binary file bytes are never rendered. Malformed, incomplete, or oversized multipart previews safely fall back to the existing raw/binary view. This presentation does not modify the bytes saved or sent by Replay.
+
+Chrome DevTools may request `/.well-known/appspecific/com.chrome.devtools.json` while inspecting localhost. The default exclusions prevent that harmless discovery request from cluttering Inspector, although Django may still log its 404 response.
 
 ## Development
 

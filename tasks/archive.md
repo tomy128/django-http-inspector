@@ -1,5 +1,10 @@
 # 已归档任务
 
+## [已完成] 发布 0.1.4 请求展示优化
+- 状态：已完成
+- 目标：过滤 Chrome DevTools 探测噪声、统一 Edit & Replay 文案，并改善 multipart/form-data Body 展示
+- 验收：Chrome well-known 默认排除；multipart 按有序字段和文件元数据安全展示且 Replay bytes 不变；83 个测试、UI detector、编译、构建、Twine 和全新环境 wheel 安装通过
+
 ## [已完成] 简化 Inspector 局域网访问配置
 - 状态：已完成
 - 目标：让开发者通过一个易懂配置即可从局域网访问 `/__inspect/`，不必同时理解 Host 与客户端 CIDR

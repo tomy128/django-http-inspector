@@ -23,6 +23,14 @@ class ConfigTests(SimpleTestCase):
         self.assertTrue(config.is_inspector_path("/__inspect/requests/1"))
         self.assertFalse(config.is_inspector_path("/__inspector"))
 
+    def test_default_excludes_chrome_devtools_probe(self):
+        config = load_config()
+        self.assertTrue(config.is_excluded_path("/.well-known/appspecific/com.chrome.devtools.json"))
+
+    @override_settings(DJANGO_HTTP_INSPECTOR={"EXCLUDE_PATHS": []})
+    def test_explicit_empty_excludes_replace_defaults(self):
+        self.assertFalse(load_config().is_excluded_path("/.well-known/appspecific/com.chrome.devtools.json"))
+
     @override_settings(DJANGO_HTTP_INSPECTOR={"PATH": "inspect"})
     def test_invalid_path_fails(self):
         with self.assertRaisesMessage(Exception, "must start"):

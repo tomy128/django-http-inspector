@@ -96,6 +96,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .headers { display: grid; grid-template-columns: minmax(130px, 220px) minmax(0, 1fr); margin: 0; font: 11px/1.65 var(--mono); }
 .headers dt { padding: 4px 12px 4px 0; color: var(--muted); overflow-wrap: anywhere; }
 .headers dd { margin: 0; padding: 4px 0; overflow-wrap: anywhere; }
+.multipart { display: grid; grid-template-columns: minmax(130px, 220px) minmax(0, 1fr); margin: 0; font: 11px/1.65 var(--mono); }
+.multipart dt { padding: 9px 12px 9px 0; color: var(--muted); overflow-wrap: anywhere; border-bottom: 1px solid var(--border); }
+.multipart dd { min-width: 0; margin: 0; padding: 9px 0; overflow-wrap: anywhere; border-bottom: 1px solid var(--border); }
+.multipart pre { max-height: 220px; padding: 0; background: transparent; }
+.file-meta { color: var(--muted); }
+.file-meta strong { color: var(--ink); font-weight: 600; }
+.multipart-empty { grid-column: 1 / -1; color: var(--muted); }
+.panel-warning { margin: 14px 0 0; padding: 9px 12px; border-radius: 6px; color: oklch(0.39 0.10 65); background: oklch(0.96 0.035 75); font-size: 12px; }
 pre { max-height: 440px; margin: 0; padding: 14px; overflow: auto; border-radius: 6px; background: var(--surface); color: var(--ink); font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .attempts { padding: 18px 24px 40px; }
 .attempts div { padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--muted); font: 11px var(--mono); }
@@ -118,6 +126,7 @@ pre { max-height: 440px; margin: 0; padding: 14px; overflow: auto; border-radius
   .edit-actions { flex-wrap: wrap; justify-content: flex-start; }
   .edit-actions .side-effect-note { width: 100%; order: -1; }
   .summary { gap: 18px; overflow-x: auto; }
+  .multipart { grid-template-columns: minmax(90px, 32%) minmax(0, 1fr); }
 }
 
 @keyframes request-arrived {

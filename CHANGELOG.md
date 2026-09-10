@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 - 2026-09-10
+
+- Present complete multipart/form-data bodies as ordered fields and file metadata without rendering binary file contents.
+- Exclude Chrome DevTools automatic-workspace discovery requests from capture by default.
+- Rename the request editing action to `Edit & Replay`.
+
 ## 0.1.3 - 2026-09-10
 
 - Add a single `ALLOW_REMOTE=True` switch for unauthenticated Inspector access from any client that can reach the development server.

@@ -14,6 +14,8 @@ InspectorWSGI
 
 Normal traffic is not proxied. The request input and response iterable are wrapped with bounded tee implementations so traffic continues lazily while a limited copy is persisted through a package-owned SQLite repository.
 
+Body presentation is a read-only derived layer. Complete multipart/form-data bodies up to the preview budget are parsed into ordered text fields and file metadata; file bytes never reach the template. Malformed, nested, incomplete, truncated, or over-budget multipart falls back to raw/binary presentation. Repository and replay services continue using the original captured bytes.
+
 The repository defaults to `BASE_DIR/.django-http-inspector.sqlite3`, creates and versions its own schema, and uses short-lived connections with bounded lock waits. It never uses Django's configured business databases. Package templates are loaded through an independent template engine, so neither `INSTALLED_APPS`, a project template backend, nor Django migrations are required.
 
 Outbound replay is modeled separately from inbound traffic:

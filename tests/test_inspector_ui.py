@@ -37,6 +37,36 @@ class InspectorUITests(IsolatedStorageMixin, SimpleTestCase):
         self.assertIn(b"data-edit-body", result["body"])
         self.assertIn(b">POST<", result["body"])
         self.assertIn(b"https://example.test/webhook", result["body"])
+        self.assertIn(b"Edit &amp; Replay", result["body"])
+        self.assertNotIn(b">Edit request<", result["body"])
+
+    def test_multipart_detail_shows_fields_and_file_metadata_without_file_bytes(self):
+        boundary = "InspectorBoundary"
+        secret = b"PK\x00\xffDO-NOT-RENDER"
+        body = (
+            b'--InspectorBoundary\r\nContent-Disposition: form-data; name="name"\r\n\r\n'
+            b'<script>alert(1)</script>\r\n'
+            b'--InspectorBoundary\r\nContent-Disposition: form-data; name="package"; filename="file.zip"\r\n'
+            b'Content-Type: application/zip\r\n\r\n' + secret + b'\r\n--InspectorBoundary--\r\n'
+        )
+        self.exchange.request_body = body
+        self.exchange.request_content_type = f'multipart/form-data; boundary="{boundary}"'
+        self.app.repository.update_exchange(self.exchange)
+        result = call_wsgi(self.app, environ(f"/__inspect/requests/{self.exchange.id}/"))
+        self.assertIn(b"multipart", result["body"])
+        self.assertIn(b"&lt;script&gt;alert(1)&lt;/script&gt;", result["body"])
+        self.assertIn(b"file.zip", result["body"])
+        self.assertIn(f"{len(secret)} B captured content".encode(), result["body"])
+        self.assertNotIn(secret, result["body"])
+        self.assertNotIn(b"data-edit-form", result["body"])
+
+    def test_response_incomplete_has_warning_and_does_not_parse_multipart(self):
+        self.exchange.response_headers = [["Content-Type", "multipart/form-data; boundary=b"]]
+        self.exchange.response_body = b"--b--\r\n"
+        self.exchange.response_body_incomplete = True
+        self.app.repository.update_exchange(self.exchange)
+        result = call_wsgi(self.app, environ(f"/__inspect/requests/{self.exchange.id}/"))
+        self.assertIn(b"Response body preview is incomplete.", result["body"])
 
     def test_exchange_snapshot_is_lightweight_and_not_cached(self):
         result = call_wsgi(self.app, environ("/__inspect/api/exchanges"))

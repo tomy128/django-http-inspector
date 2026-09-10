@@ -90,7 +90,10 @@ def load_config() -> InspectConfig:
         path=_path(raw.get("PATH", "/__inspect/"), "PATH"),
         capture_max_bytes=_positive_number(raw.get("CAPTURE_MAX_BYTES", 1024 * 1024), "CAPTURE_MAX_BYTES", int),
         max_records=_positive_number(raw.get("MAX_RECORDS", 1000), "MAX_RECORDS", int),
-        exclude_paths=tuple(_path(p, "EXCLUDE_PATHS") for p in raw.get("EXCLUDE_PATHS", ("/static/", "/favicon.ico"))),
+        exclude_paths=tuple(_path(p, "EXCLUDE_PATHS") for p in raw.get(
+            "EXCLUDE_PATHS",
+            ("/static/", "/favicon.ico", "/.well-known/appspecific/com.chrome.devtools.json"),
+        )),
         trusted_proxy_cidrs=trusted,
         inspector_allowed_hosts=hosts,
         inspector_allowed_client_cidrs=clients,

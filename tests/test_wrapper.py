@@ -29,6 +29,10 @@ class WrapperTests(IsolatedStorageMixin, SimpleTestCase):
         self.assertIn(b"django-http-inspector", result["body"])
         self.assertEqual(self.app.repository.count_exchanges(), 0)
 
+    def test_chrome_devtools_probe_is_not_captured_by_default(self):
+        call_wsgi(self.app, environ("/.well-known/appspecific/com.chrome.devtools.json"))
+        self.assertEqual(self.app.repository.count_exchanges(), 0)
+
     def test_streaming_response_is_not_preconsumed(self):
         statuses = []
         env = environ("/stream/")

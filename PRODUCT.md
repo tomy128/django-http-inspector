@@ -38,6 +38,7 @@ django-http-inspector 是一个嵌入现有 Django 项目的开发期 HTTP Inspe
 - 请求列表到请求详情再到 replay 的价值路径最短。
 - 请求流自动同步但不替换当前详情或打断 Edit & Replay 草稿；同步状态必须真实可见。
 - Edit & Replay 只允许修改 headers 和文本 body，method 与完整 URL 始终来自原捕获，避免产品滑向通用 API 客户端。
+- Multipart 默认呈现有序文本字段与文件元数据，不用 boundary 噪声或二进制乱码阻断诊断；展示逻辑不改变捕获与 Replay bytes。
 - 保留真实 HTTP 语义，尤其是捕获时的完整有效 URL和网络级 replay；同时诚实呈现 WSGI 已被服务器规范化的边界。
 - Inspector UI 与业务 Django middleware 链隔离，调试工具自身必须可靠可达。
 - 高信息密度必须建立在清晰层级和一致组件之上。

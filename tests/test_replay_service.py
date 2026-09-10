@@ -84,3 +84,16 @@ class ReplayServiceTests(IsolatedStorageMixin, SimpleTestCase):
         self.assertEqual(stored.request_headers, headers)
         self.assertEqual(stored.request_body, b"edited")
         self.assertEqual(send.call_args.args[1:4], (source.method, headers, b"edited"))
+
+    @patch("django_http_inspector.replay.service.resolve_target")
+    @patch("django_http_inspector.replay.service.send_request")
+    def test_multipart_equivalent_replay_preserves_original_bytes(self, send, resolve):
+        resolve.return_value = ReplayTarget(
+            "https://example.test/hook", "https", "example.test", 443, "/hook", ("93.184.216.34",), False
+        )
+        send.return_value = (200, [], b"ok", 2, "93.184.216.34")
+        body = b"--b\r\nContent-Disposition: form-data; name=file; filename=x.zip\r\n\r\nPK\x00\xff\r\n--b--\r\n"
+        source = self.source(request_body=body, request_declared_size=len(body), request_observed_size=len(body), request_captured_size=len(body))
+        attempt = replay_exchange(source, load_config(), self.repository)
+        self.assertEqual(self.repository.get_attempt(attempt.id).request_body, body)
+        self.assertEqual(send.call_args.args[3], body)

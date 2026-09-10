@@ -33,15 +33,15 @@ The tests use minimal Django settings without adding django-http-inspector to `I
 The release must contain exactly one source archive and one universal wheel for the selected version:
 
 ```text
-dist/django_http_inspector-0.1.3.tar.gz
-dist/django_http_inspector-0.1.3-py3-none-any.whl
+dist/django_http_inspector-0.1.4.tar.gz
+dist/django_http_inspector-0.1.4-py3-none-any.whl
 ```
 
 Install the wheel into a fresh virtual environment and verify the public import before upload:
 
 ```bash
 python -m venv /tmp/django-http-inspector-release-check
-/tmp/django-http-inspector-release-check/bin/python -m pip install dist/django_http_inspector-0.1.3-py3-none-any.whl
+/tmp/django-http-inspector-release-check/bin/python -m pip install dist/django_http_inspector-0.1.4-py3-none-any.whl
 /tmp/django-http-inspector-release-check/bin/python -c "from django_http_inspector import InspectorWSGI; print(InspectorWSGI)"
 ```
 
@@ -59,7 +59,7 @@ Because Django comes from the main index, test installation normally needs both 
 python -m pip install \
   --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  django-http-inspector==0.1.3
+  django-http-inspector==0.1.4
 ```
 
 ## Production upload
@@ -68,8 +68,8 @@ Review the filenames and version one last time, then run:
 
 ```bash
 python -m twine upload \
-  dist/django_http_inspector-0.1.3.tar.gz \
-  dist/django_http_inspector-0.1.3-py3-none-any.whl
+  dist/django_http_inspector-0.1.4.tar.gz \
+  dist/django_http_inspector-0.1.4-py3-none-any.whl
 ```
 
 PyPI releases are immutable: the same version cannot be uploaded again. Any correction requires a new version and a clean rebuild.
@@ -77,7 +77,7 @@ PyPI releases are immutable: the same version cannot be uploaded again. Any corr
 After upload, verify from a fresh environment:
 
 ```bash
-python -m pip install django-http-inspector==0.1.3
+python -m pip install django-http-inspector==0.1.4
 python -c "from django_http_inspector import InspectorWSGI; print(InspectorWSGI)"
 ```
 
